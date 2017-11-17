@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">EventsApp</string>
+    <string name="title_activity_main">Main</string>
+    <string name="instructions">Place your fingertip on the Home button to verify your identity</string>
+</resources>
