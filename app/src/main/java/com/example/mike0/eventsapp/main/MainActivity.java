@@ -22,6 +22,9 @@ import android.widget.TextView;
 
 import com.example.mike0.eventsapp.data.FingerprintHandler;
 import com.example.mike0.eventsapp.R;
+import com.example.mike0.eventsapp.data.api.EventsService;
+import com.example.mike0.eventsapp.data.model.Event;
+import com.example.mike0.eventsapp.data.model.EventsAPI;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -39,16 +42,33 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.Formatter;
+import java.util.logging.SimpleFormatter;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 10;
-    private static final String TAG = "bump";
+    private static final String TAG = "tag";
+
+    final static String API_KEY = "XEJ7EQTKLAJUUC5LOOPS";
+
+    EventsService service;
+
     private GoogleMap mMap;
 
     private LocationManager locationManager;
@@ -62,6 +82,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private FingerprintManager.CryptoObject cryptoObject;
     private FingerprintManager fingerprintManager;
     private KeyguardManager keyguardManager;
+
+    String lat, lng;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -167,9 +189,60 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                     .findFragmentById(R.id.map);
             mapFragment.getMapAsync(this);
+
         }
+        init();
     }
 
+    public void init() {
+        service = new Retrofit.Builder()
+                .baseUrl(EventsService.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(EventsService.class);
+    }
+
+    public void getEvents(String title, String lat, String lng) {
+        service.getEvents(title, "5mi", lat, lng, API_KEY).enqueue(new Callback<EventsAPI>() {
+            @Override
+            public void onResponse(Call<EventsAPI> call, Response<EventsAPI> response) {
+                if (response.isSuccessful()) {
+
+                    Date date1 = null;
+                    String temp = "";
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                    for (int i = 0; i < response.body().getEvents().size(); i++) {
+                        try {
+                            date1 = formatter.parse(response.body().getEvents().get(i).getStart().getLocal());
+                            SimpleDateFormat formatter2 = new SimpleDateFormat("M-dd-yyyy h:mm a");
+                            temp = formatter2.format(date1);
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+                        Log.d(TAG, "Title: " + response.body().getEvents().get(i).getName().getText());
+                        //Log.d(TAG, "onResponse: Description: " + response.body().getEvents().get(i).getDescription().getText());
+                        String des1 = response.body().getEvents().get(i).getDescription().getText();
+                        Log.d(TAG, "Short Description: " + des1.substring(0, 100) + "...");
+                        Log.d(TAG, "Event Time: " + temp);
+                        Log.d(TAG, "Event Webpage: " + response.body().getEvents().get(i).getUrl());
+                    }
+
+                    //Log.d(TAG, "Event Time: " + response.body().getEvents().get(0).getStart().getLocal());
+                    //Log.d(TAG, "Time Converted: " + date1);
+
+                    //Log.d(TAG, "onResponse: " + formatter.parse(response.body().getEvents().get(0).getStart().getLocal()));
+
+                    Log.d(TAG, "Size: " + response.body().getEvents().size());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<EventsAPI> call, Throwable t) {
+                Log.d(TAG, "Failure?");
+            }
+        });
+    }
 
     /**
      * Manipulates the map once available.
@@ -207,8 +280,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true);
 
             Location location = locationManager.getLastKnownLocation(locationManager.GPS_PROVIDER);
-            final double[] longitude = {location.getLongitude()};
             final double[] latitude = {location.getLatitude()};
+            final double[] longitude = {location.getLongitude()};
+
+            lat = String.valueOf(location.getLatitude());
+            lng = String.valueOf(location.getLongitude());
 
             Log.d(TAG, "onSuccess: " + location.getLatitude());
             Log.d(TAG, "onSuccess: " + location.getLongitude());
@@ -217,12 +293,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             latitude[0] = location.getLatitude();
 
             // Add a marker in Current Location and move the camera
-            LatLng deviceLocation = new LatLng(location.getLongitude(), location.getLongitude());
+            LatLng deviceLocation = new LatLng(location.getLatitude(), location.getLongitude());
+            LatLng eventLocation = new LatLng(33.885884, -84.40442999999999);
 
-            mMap.addMarker(new MarkerOptions().position(deviceLocation).title("Your Current Location"));
+            mMap.addMarker(new MarkerOptions().position(eventLocation).title("Event Location"));
 
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(deviceLocation));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(deviceLocation, 13));
 
+            getEvents("club", lat, lng);
 
         } else {
             // Show rationale and request permission.
