@@ -2,9 +2,7 @@ package com.example.mike0.eventsapp.main;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.KeyguardManager;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.fingerprint.FingerprintManager;
 import android.location.Location;
@@ -17,11 +15,14 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.widget.TextView;
 
 import com.example.mike0.eventsapp.data.FingerprintHandler;
 import com.example.mike0.eventsapp.R;
+import com.example.mike0.eventsapp.data.adapter.EventsAdapter;
 import com.example.mike0.eventsapp.data.api.EventsService;
 import com.example.mike0.eventsapp.data.model.Event;
 import com.example.mike0.eventsapp.data.model.EventsAPI;
@@ -44,10 +45,9 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.Formatter;
-import java.util.logging.SimpleFormatter;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -68,6 +68,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     final static String API_KEY = "XEJ7EQTKLAJUUC5LOOPS";
 
     EventsService service;
+
+    private RecyclerView eventsRecyclerView;
+    private EventsAdapter eventsAdapter;
+
+    TextView totalEvents;
 
     private GoogleMap mMap;
 
@@ -90,24 +95,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        totalEvents = (TextView) findViewById(R.id.event_results_total);
+
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                        && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return;
-                }
-                locationManager.requestLocationUpdates("gps", 5000, 0, (android.location.LocationListener) locationListener);
-            }
-        };
+
 
         // If you’ve set your app’s minSdkVersion to anything lower than 23, then you’ll need to verify that the device is running Marshmallow
         // or higher before executing any fingerprint-related code
@@ -191,7 +182,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             mapFragment.getMapAsync(this);
 
         }
-        init();
     }
 
     public void init() {
@@ -202,11 +192,27 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .create(EventsService.class);
     }
 
+    private void setUpRecyclerView() {
+        eventsRecyclerView = (RecyclerView) findViewById(R.id.recycler_events);
+        eventsRecyclerView.setHasFixedSize(true);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+
+        eventsRecyclerView.setLayoutManager(linearLayoutManager);
+
+        eventsAdapter = new EventsAdapter(new ArrayList<Event>(0));
+        eventsRecyclerView.setAdapter(eventsAdapter);
+        Log.d(TAG, "Running Adapter?");
+    }
+
     public void getEvents(String title, String lat, String lng) {
         service.getEvents(title, "5mi", lat, lng, API_KEY).enqueue(new Callback<EventsAPI>() {
             @Override
             public void onResponse(Call<EventsAPI> call, Response<EventsAPI> response) {
                 if (response.isSuccessful()) {
+                    totalEvents.setText("Total results near your location: " + response.body().getEvents().size());
+
+                    eventsAdapter.updateDataSet(response.body().getEvents());
 
                     Date date1 = null;
                     String temp = "";
@@ -280,17 +286,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true);
 
             Location location = locationManager.getLastKnownLocation(locationManager.GPS_PROVIDER);
-            final double[] latitude = {location.getLatitude()};
-            final double[] longitude = {location.getLongitude()};
 
             lat = String.valueOf(location.getLatitude());
             lng = String.valueOf(location.getLongitude());
 
             Log.d(TAG, "onSuccess: " + location.getLatitude());
             Log.d(TAG, "onSuccess: " + location.getLongitude());
-
-            longitude[0] = location.getLongitude();
-            latitude[0] = location.getLatitude();
 
             // Add a marker in Current Location and move the camera
             LatLng deviceLocation = new LatLng(location.getLatitude(), location.getLongitude());
@@ -300,7 +301,27 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(deviceLocation, 13));
 
+            locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(Location location) {
+                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return;
+                    }
+                    locationManager.requestLocationUpdates("gps", 5000, 0, (android.location.LocationListener) locationListener);
+                }
+            };
+
+            init();
             getEvents("club", lat, lng);
+            setUpRecyclerView();
 
         } else {
             // Show rationale and request permission.
