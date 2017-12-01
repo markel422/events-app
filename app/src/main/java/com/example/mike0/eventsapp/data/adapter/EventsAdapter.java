@@ -1,16 +1,22 @@
 package com.example.mike0.eventsapp.data.adapter;
 
+import android.content.Context;
+import android.content.DialogInterface;
+import android.graphics.Color;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.mike0.eventsapp.R;
 import com.example.mike0.eventsapp.data.model.Event;
-import com.example.mike0.eventsapp.data.model.EventsAPI;
+import com.example.mike0.eventsapp.data.model.ItemClickListener;
+import com.example.mike0.eventsapp.main.MainActivity;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -25,15 +31,30 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
 
     public static final String TAG = "tag";
 
+    private Context context;
     private List<Event> eventsList;
 
-    public EventsAdapter(List<Event> resultList) {
+    private int globalPosition, lastClick, currentClick, itemSelectState, defaultTextColors;
+
+    private boolean saveEvent, itemClicked;
+
+    private ItemClickListener clickListener;
+
+    public EventsAdapter(Context context, List<Event> resultList) {
+        this.context = context;
         this.eventsList = resultList;
+
+        this.clickListener = (ItemClickListener) context;
+        itemSelectState = 0;
     }
 
     public void updateDataSet(List<Event> resultList) {
         this.eventsList = resultList;
         notifyDataSetChanged();
+    }
+
+    public int getGlobalPosition() {
+        return globalPosition;
     }
 
     @Override
@@ -45,9 +66,12 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
+    public void onBindViewHolder(final ViewHolder holder, int position) {
         holder.eventsTitle.setText(eventsList.get(position).getName().getText());
-        holder.eventsDesc.setText(eventsList.get(position).getDescription().getText().substring(0, 175) + "...");
+
+        if (eventsList.get(position).getDescription().getText() != null) {
+            holder.eventsDesc.setText(eventsList.get(position).getDescription().getText().substring(0, 175) + "...");
+        }
 
         Date date1 = null;
         String newDate = "";
@@ -62,6 +86,104 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         holder.eventsTime.setText("Start Date:  " + newDate);
 
         holder.eventsWebpage.setText(eventsList.get(position).getUrl());
+
+        /*holder.linearLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                globalPosition = holder.getAdapterPosition();
+                Log.d(TAG, "globalPosition: " + globalPosition);
+                if (holder.favIcon.getVisibility() == View.INVISIBLE) {
+                    holder.favIcon.setVisibility(View.VISIBLE);
+                } else if (holder.favIcon.getVisibility() == View.VISIBLE) {
+                    holder.favIcon.setVisibility(View.INVISIBLE);
+                }
+
+                currentClick = holder.getAdapterPosition();
+
+                //itemSelectState++;
+                //lastClick = currentClick;
+                Log.d(TAG, "lastClick: " + lastClick);
+
+                Log.d(TAG, "currentClick: " + currentClick);
+
+                Log.d(TAG, "itemSelectState: " + itemSelectState);
+
+                if (currentClick == lastClick) {
+                    itemSelectState++;
+                } else if (currentClick != lastClick) {
+                    holder.eventsTitle.setTextColor(defaultTextColors);
+                    holder.eventsDesc.setTextColor(defaultTextColors);
+                    holder.eventsTime.setTextColor(defaultTextColors);
+                    holder.eventsWebpage.setTextColor(defaultTextColors);
+                    lastClick = currentClick;
+                    itemSelectState = 0;
+                    itemSelectState++;
+                }
+
+                *//*if (itemSelectState == 0) {
+                    lastClick = currentClick;
+                    holder.eventsTitle.setTextColor(defaultTextColors);
+                    holder.eventsDesc.setTextColor(defaultTextColors);
+                    holder.eventsTime.setTextColor(defaultTextColors);
+                    holder.eventsWebpage.setTextColor(defaultTextColors);
+                }*//*
+
+                if (itemSelectState == 1 && currentClick == lastClick) {
+                    Log.d(TAG, "lastClick: " + lastClick);
+
+                    Log.d(TAG, "currentClick: " + currentClick);
+                    defaultTextColors = holder.eventsTitle.getTextColors().getDefaultColor();
+
+                    holder.eventsTitle.setTextColor(Color.BLUE);
+                    holder.eventsDesc.setTextColor(Color.BLUE);
+                    holder.eventsTime.setTextColor(Color.BLUE);
+                    holder.eventsWebpage.setTextColor(Color.BLUE);
+
+                    currentClick = holder.getAdapterPosition();
+                }
+
+
+                if (holder.eventsTitle.getTextColors().getDefaultColor() != defaultTextColors && itemSelectState == 2 && currentClick == lastClick) {
+                    itemSelectState++;
+                    Log.d(TAG, "lastClick: " + lastClick);
+
+                    Log.d(TAG, "currentClick: " + currentClick);
+                }
+                if (itemSelectState == 3 && currentClick == lastClick) {
+                    Log.d(TAG, "lastClick: " + lastClick);
+
+                    Log.d(TAG, "currentClick: " + currentClick);
+                    new AlertDialog.Builder(context)
+                            .setTitle("Save Event")
+                            .setMessage("Would you like to save this event to your database?")
+                            .setCancelable(false)
+                            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    saveEvent = true;
+                                    itemSelectState = 0;
+                                    holder.eventsTitle.setTextColor(defaultTextColors);
+                                    holder.eventsDesc.setTextColor(defaultTextColors);
+                                    holder.eventsTime.setTextColor(defaultTextColors);
+                                    holder.eventsWebpage.setTextColor(defaultTextColors);
+                                }
+                            })
+                            .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+
+                                    itemSelectState = 0;
+                                    holder.eventsTitle.setTextColor(defaultTextColors);
+                                    holder.eventsDesc.setTextColor(defaultTextColors);
+                                    holder.eventsTime.setTextColor(defaultTextColors);
+                                    holder.eventsWebpage.setTextColor(defaultTextColors);
+                                }
+                            })
+                            .show();
+                }
+
+            }
+        });*/
     }
 
     @Override
@@ -69,25 +191,50 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         return eventsList.size();
     }
 
-    private String buildEvents(EventsAPI result) {
-        StringBuilder eventsBuilder = new StringBuilder();
-        eventsBuilder.append(result.getEvents());
-        return eventsBuilder.toString();
+    public int getItemNamePosition(String name) {
+        for (int i = 0; i < eventsList.size(); i++) {
+            if (eventsList.get(i).getName().getText().equals(name)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public void setClickListener(ItemClickListener itemClickListener) {
+        this.clickListener = itemClickListener;
+    }
+
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+
+        ImageView favIcon;
 
         TextView eventsTitle;
         TextView eventsDesc;
         TextView eventsTime;
         TextView eventsWebpage;
 
+        LinearLayout linearLayout;
+
+
+
         public ViewHolder(View itemView) {
             super(itemView);
+            itemView.setTag(itemView);
+            itemView.setOnClickListener(this);
+            favIcon = (ImageView) itemView.findViewById(R.id.fav_icon);
+
             eventsTitle = (TextView) itemView.findViewById(R.id.item_event_title);
             eventsDesc = (TextView) itemView.findViewById(R.id.item_event_desc);
             eventsTime = (TextView) itemView.findViewById(R.id.item_event_time);
             eventsWebpage = (TextView) itemView.findViewById(R.id.item_event_webpage);
+
+            linearLayout = (LinearLayout) itemView.findViewById(R.id.linear_events_list);
+        }
+
+        @Override
+        public void onClick(View view) {
+                clickListener.onClick(view, getAdapterPosition());
         }
 
         /*@Override

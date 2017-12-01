@@ -102,23 +102,26 @@ public class Event implements Parcelable
     private String venueId;
     @SerializedName("category_id")
     @Expose
-    private Object categoryId;
+    private String categoryId;
     @SerializedName("subcategory_id")
     @Expose
-    private Object subcategoryId;
+    private String subcategoryId;
     @SerializedName("format_id")
     @Expose
-    private Object formatId;
+    private String formatId;
     @SerializedName("resource_uri")
     @Expose
     private String resourceUri;
-    @SerializedName("series_id")
-    @Expose
-    private String seriesId;
     @SerializedName("logo")
     @Expose
     private Logo logo;
-    public final static Parcelable.Creator<Event> CREATOR = new Creator<Event>() {
+    @SerializedName("venue")
+    @Expose
+    private Venue venue;
+    @SerializedName("series_id")
+    @Expose
+    private String seriesId;
+    public final static Creator<Event> CREATOR = new Creator<Event>() {
 
 
         @SuppressWarnings({
@@ -166,12 +169,13 @@ public class Event implements Parcelable
         this.logoId = ((String) in.readValue((String.class.getClassLoader())));
         this.organizerId = ((String) in.readValue((String.class.getClassLoader())));
         this.venueId = ((String) in.readValue((String.class.getClassLoader())));
-        this.categoryId = ((Object) in.readValue((Object.class.getClassLoader())));
-        this.subcategoryId = ((Object) in.readValue((Object.class.getClassLoader())));
-        this.formatId = ((Object) in.readValue((Object.class.getClassLoader())));
+        this.categoryId = ((String) in.readValue((String.class.getClassLoader())));
+        this.subcategoryId = ((String) in.readValue((String.class.getClassLoader())));
+        this.formatId = ((String) in.readValue((String.class.getClassLoader())));
         this.resourceUri = ((String) in.readValue((String.class.getClassLoader())));
-        this.seriesId = ((String) in.readValue((String.class.getClassLoader())));
         this.logo = ((Logo) in.readValue((Logo.class.getClassLoader())));
+        this.venue = ((Venue) in.readValue((Venue.class.getClassLoader())));
+        this.seriesId = ((String) in.readValue((String.class.getClassLoader())));
     }
 
     public Event() {
@@ -417,27 +421,27 @@ public class Event implements Parcelable
         this.venueId = venueId;
     }
 
-    public Object getCategoryId() {
+    public String getCategoryId() {
         return categoryId;
     }
 
-    public void setCategoryId(Object categoryId) {
+    public void setCategoryId(String categoryId) {
         this.categoryId = categoryId;
     }
 
-    public Object getSubcategoryId() {
+    public String getSubcategoryId() {
         return subcategoryId;
     }
 
-    public void setSubcategoryId(Object subcategoryId) {
+    public void setSubcategoryId(String subcategoryId) {
         this.subcategoryId = subcategoryId;
     }
 
-    public Object getFormatId() {
+    public String getFormatId() {
         return formatId;
     }
 
-    public void setFormatId(Object formatId) {
+    public void setFormatId(String formatId) {
         this.formatId = formatId;
     }
 
@@ -449,20 +453,28 @@ public class Event implements Parcelable
         this.resourceUri = resourceUri;
     }
 
-    public String getSeriesId() {
-        return seriesId;
-    }
-
-    public void setSeriesId(String seriesId) {
-        this.seriesId = seriesId;
-    }
-
     public Logo getLogo() {
         return logo;
     }
 
     public void setLogo(Logo logo) {
         this.logo = logo;
+    }
+
+    public Venue getVenue() {
+        return venue;
+    }
+
+    public void setVenue(Venue venue) {
+        this.venue = venue;
+    }
+
+    public String getSeriesId() {
+        return seriesId;
+    }
+
+    public void setSeriesId(String seriesId) {
+        this.seriesId = seriesId;
     }
 
     public void writeToParcel(Parcel dest, int flags) {
@@ -500,8 +512,9 @@ public class Event implements Parcelable
         dest.writeValue(subcategoryId);
         dest.writeValue(formatId);
         dest.writeValue(resourceUri);
-        dest.writeValue(seriesId);
         dest.writeValue(logo);
+        dest.writeValue(venue);
+        dest.writeValue(seriesId);
     }
 
     public int describeContents() {

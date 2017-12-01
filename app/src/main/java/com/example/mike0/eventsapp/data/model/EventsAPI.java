@@ -17,7 +17,10 @@ public class EventsAPI implements Parcelable
     @SerializedName("events")
     @Expose
     private List<Event> events = null;
-    public final static Parcelable.Creator<EventsAPI> CREATOR = new Creator<EventsAPI>() {
+    @SerializedName("location")
+    @Expose
+    private Location location;
+    public final static Creator<EventsAPI> CREATOR = new Creator<EventsAPI>() {
 
 
         @SuppressWarnings({
@@ -37,6 +40,7 @@ public class EventsAPI implements Parcelable
     protected EventsAPI(Parcel in) {
         this.pagination = ((Pagination) in.readValue((Pagination.class.getClassLoader())));
         in.readList(this.events, (com.example.mike0.eventsapp.data.model.Event.class.getClassLoader()));
+        this.location = ((Location) in.readValue((Location.class.getClassLoader())));
     }
 
     public EventsAPI() {
@@ -58,9 +62,18 @@ public class EventsAPI implements Parcelable
         this.events = events;
     }
 
+    public Location getLocation() {
+        return location;
+    }
+
+    public void setLocation(Location location) {
+        this.location = location;
+    }
+
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeValue(pagination);
         dest.writeList(events);
+        dest.writeValue(location);
     }
 
     public int describeContents() {

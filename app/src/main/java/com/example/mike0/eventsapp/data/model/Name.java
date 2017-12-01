@@ -16,7 +16,7 @@ public class Name implements Parcelable
     @SerializedName("html")
     @Expose
     private String html;
-    public final static Parcelable.Creator<Name> CREATOR = new Creator<Name>() {
+    public final static Creator<Name> CREATOR = new Creator<Name>() {
 
 
         @SuppressWarnings({

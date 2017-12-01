@@ -19,7 +19,7 @@ public class Start implements Parcelable
     @SerializedName("utc")
     @Expose
     private String utc;
-    public final static Parcelable.Creator<Start> CREATOR = new Creator<Start>() {
+    public final static Creator<Start> CREATOR = new Creator<Start>() {
 
 
         @SuppressWarnings({

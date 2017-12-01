@@ -19,7 +19,7 @@ public class CropMask implements Parcelable
     @SerializedName("height")
     @Expose
     private Integer height;
-    public final static Parcelable.Creator<CropMask> CREATOR = new Creator<CropMask>() {
+    public final static Creator<CropMask> CREATOR = new Creator<CropMask>() {
 
 
         @SuppressWarnings({

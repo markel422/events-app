@@ -2,6 +2,7 @@ package com.example.mike0.eventsapp.data;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.fingerprint.FingerprintManager;
 import android.Manifest;
@@ -9,6 +10,9 @@ import android.os.Build;
 import android.os.CancellationSignal;
 import android.support.v4.app.ActivityCompat;
 import android.widget.Toast;
+
+import com.example.mike0.eventsapp.login.LoginActivity;
+import com.example.mike0.eventsapp.main.MainActivity;
 
 /**
  * Created by mike0 on 11/16/2017.
@@ -72,6 +76,8 @@ public class FingerprintHandler extends FingerprintManager.AuthenticationCallbac
             FingerprintManager.AuthenticationResult result) {
 
         Toast.makeText(context, "Success!", Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(context, MainActivity.class);
+        context.startActivity(intent);
     }
 
 }

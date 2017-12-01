@@ -3,6 +3,9 @@ package com.example.mike0.eventsapp.main;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.KeyguardManager;
+import android.content.ContentValues;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.fingerprint.FingerprintManager;
 import android.location.Location;
@@ -15,44 +18,43 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.mike0.eventsapp.data.FingerprintHandler;
 import com.example.mike0.eventsapp.R;
 import com.example.mike0.eventsapp.data.adapter.EventsAdapter;
 import com.example.mike0.eventsapp.data.api.EventsService;
+import com.example.mike0.eventsapp.data.database.EventReaderContract.EventEntry;
+import com.example.mike0.eventsapp.data.database.EventReaderDBHelper;
 import com.example.mike0.eventsapp.data.model.Event;
+import com.example.mike0.eventsapp.data.model.EventMarkerList;
 import com.example.mike0.eventsapp.data.model.EventsAPI;
+import com.example.mike0.eventsapp.data.model.ItemClickListener;
+import com.example.mike0.eventsapp.details.DetailsActivity;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
+import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import net.sqlcipher.Cursor;
+import net.sqlcipher.database.SQLiteDatabase;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -60,7 +62,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, ItemClickListener{
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 10;
     private static final String TAG = "tag";
@@ -72,6 +74,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private RecyclerView eventsRecyclerView;
     private EventsAdapter eventsAdapter;
 
+    LinearLayout eventLayoutList;
+
     TextView totalEvents;
 
     private GoogleMap mMap;
@@ -79,21 +83,25 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private LocationManager locationManager;
     private LocationListener locationListener;
 
-    private static final String KEY_NAME = "yourKey";
-    private Cipher cipher;
-    private KeyStore keyStore;
-    private KeyGenerator keyGenerator;
-    private TextView textView;
-    private FingerprintManager.CryptoObject cryptoObject;
-    private FingerprintManager fingerprintManager;
-    private KeyguardManager keyguardManager;
-
     String lat, lng;
+
+    int eventSize;
+
+    ArrayList<EventMarkerList> eventMarkList;
+    ArrayList<Event> eventList;
+    ArrayList<Integer> savedEventList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        SQLiteDatabase.loadLibs(this);
+
+        /*File databasePath = getDatabasePath("myEventReader.db");
+        databasePath.delete();*/
+
+        eventLayoutList = (LinearLayout) findViewById(R.id.linear_events_list);
 
         totalEvents = (TextView) findViewById(R.id.event_results_total);
 
@@ -103,85 +111,20 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         // If you’ve set your app’s minSdkVersion to anything lower than 23, then you’ll need to verify that the device is running Marshmallow
         // or higher before executing any fingerprint-related code
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            //Get an instance of KeyguardManager and FingerprintManager//
-            keyguardManager =
-                    (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
-            fingerprintManager =
-                    (FingerprintManager) getSystemService(FINGERPRINT_SERVICE);
-
-            textView = (TextView) findViewById(R.id.textview);
-
-            //Check whether the device has a fingerprint sensor//
-            if (!fingerprintManager.isHardwareDetected()) {
-                // If a fingerprint sensor isn’t available, then inform the user that they’ll be unable to use your app’s fingerprint functionality//
-                textView.setText("Your device doesn't support fingerprint authentication");
-            }
-            //Check whether the user has granted your app the USE_FINGERPRINT permission//
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.USE_FINGERPRINT) != PackageManager.PERMISSION_GRANTED) {
-                // If your app doesn't have this permission, then display the following text//
-                textView.setText("Please enable the fingerprint permission");
-            }
-
-            //Check that the user has registered at least one fingerprint//
-            if (!fingerprintManager.hasEnrolledFingerprints()) {
-                // If the user hasn’t configured any fingerprints, then display the following message//
-                textView.setText("No fingerprint configured. Please register at least one fingerprint in your device's Settings");
-            }
-
-            //Check that the lockscreen is secured//
-            if (!keyguardManager.isKeyguardSecure()) {
-                // If the user hasn’t secured their lockscreen with a PIN password or pattern, then display the following text//
-                textView.setText("Please enable lockscreen security in your device's Settings");
-            } else {
-                try {
-                    generateKey();
-                } catch (FingerprintException e) {
-                    e.printStackTrace();
-                }
-
-                if (initCipher()) {
-                    //If the cipher is initialized successfully, then create a CryptoObject instance//
-                    cryptoObject = new FingerprintManager.CryptoObject(cipher);
-
-                    // Here, I’m referencing the FingerprintHandler class that we’ll create in the next section. This class will be responsible
-                    // for starting the authentication process (via the startAuth method) and processing the authentication process events//
-                    FingerprintHandler helper = new FingerprintHandler(this);
-                    helper.startAuth(fingerprintManager, cryptoObject);
-                }
-            }
-
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-
-                // Should we show an explanation?
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION)) {
-
-                    // Show an explanation to the user *asynchronously* -- don't block
-                    // this thread waiting for the user's response! After the user
-                    // sees the explanation, try again to request the permission.
-
-                } else {
-
-                    // No explanation needed, we can request the permission.
-
-                    ActivityCompat.requestPermissions(this,
-                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                            MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-
-                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
-                    // app-defined int constant. The callback method gets the
-                    // result of the request.
-                }
-            }
 
             // Obtain the SupportMapFragment and get notified when the map is ready to be used.
             SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                     .findFragmentById(R.id.map);
             mapFragment.getMapAsync(this);
-
         }
+        init();
+        setUpRecyclerView();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        //database.close();
     }
 
     public void init() {
@@ -200,9 +143,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         eventsRecyclerView.setLayoutManager(linearLayoutManager);
 
-        eventsAdapter = new EventsAdapter(new ArrayList<Event>(0));
+        eventsAdapter = new EventsAdapter(this, new ArrayList<Event>(0));
         eventsRecyclerView.setAdapter(eventsAdapter);
-        Log.d(TAG, "Running Adapter?");
+
+        eventsAdapter.setClickListener(this);
     }
 
     public void getEvents(String title, String lat, String lng) {
@@ -213,6 +157,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     totalEvents.setText("Total results near your location: " + response.body().getEvents().size());
 
                     eventsAdapter.updateDataSet(response.body().getEvents());
+                    eventMarkList = new ArrayList<>(0);
+                    eventList = new ArrayList<>(0);
 
                     Date date1 = null;
                     String temp = "";
@@ -229,10 +175,22 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         Log.d(TAG, "Title: " + response.body().getEvents().get(i).getName().getText());
                         //Log.d(TAG, "onResponse: Description: " + response.body().getEvents().get(i).getDescription().getText());
                         String des1 = response.body().getEvents().get(i).getDescription().getText();
-                        Log.d(TAG, "Short Description: " + des1.substring(0, 100) + "...");
+
+                        if (des1 != null) {
+                            Log.d(TAG, "Short Description: " + des1.substring(0, 100) + "...");
+                        }
+
                         Log.d(TAG, "Event Time: " + temp);
                         Log.d(TAG, "Event Webpage: " + response.body().getEvents().get(i).getUrl());
+
+                        eventMarkList.add(new EventMarkerList(Double.parseDouble(response.body().getEvents().get(i).getVenue().getLatitude()), Double.parseDouble(response.body().getEvents().get(i).getVenue().getLongitude())));
+                        eventList.add(response.body().getEvents().get(i));
+
+                        LatLng eventsLocation = new LatLng(eventMarkList.get(i).getLat(), eventMarkList.get(i).getLng());
+                        mMap.addMarker(new MarkerOptions().position(eventsLocation).title(response.body().getEvents().get(i).getName().getText()));
                     }
+
+
 
                     //Log.d(TAG, "Event Time: " + response.body().getEvents().get(0).getStart().getLocal());
                     //Log.d(TAG, "Time Converted: " + date1);
@@ -240,14 +198,39 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     //Log.d(TAG, "onResponse: " + formatter.parse(response.body().getEvents().get(0).getStart().getLocal()));
 
                     Log.d(TAG, "Size: " + response.body().getEvents().size());
+                    eventSize = response.body().getEvents().size();
                 }
             }
 
             @Override
             public void onFailure(Call<EventsAPI> call, Throwable t) {
-                Log.d(TAG, "Failure?");
+                Log.d(TAG, "Network Failed");
             }
         });
+    }
+
+    private void saveEvent(String title, String desc, String time, String url) {
+        SQLiteDatabase db = EventReaderDBHelper.getInstance(this).getWritableDatabase("somePass");
+
+        ContentValues values = new ContentValues();
+        values.put(EventEntry.COLUMN_NAME_TITLE, title);
+        values.put(EventEntry.COLUMN_NAME_DESCRIPTION, desc);
+        values.put(EventEntry.COLUMN_NAME_TIME, time);
+        values.put(EventEntry.COLUMN_NAME_URL, url);
+
+        db.insert(
+                EventEntry.TABLE_NAME,
+                null,
+                values
+        );
+
+        Cursor cursor = db.rawQuery("SELECT * FROM '" + EventEntry.TABLE_NAME + "';", null);
+        Log.d(MainActivity.class.getSimpleName(), "Rows count: " + cursor.getCount());
+        cursor.close();
+        db.close();
+
+        // this will throw net.sqlcipher.database.SQLiteException: file is encrypted or is not a database: create locale table failed
+        //db = FeedReaderDbHelper.getInstance(this).getWritableDatabase("");
     }
 
     /**
@@ -295,11 +278,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
             // Add a marker in Current Location and move the camera
             LatLng deviceLocation = new LatLng(location.getLatitude(), location.getLongitude());
-            LatLng eventLocation = new LatLng(33.885884, -84.40442999999999);
+            //LatLng eventLocation = new LatLng(33.885884, -84.40442999999999);
 
-            mMap.addMarker(new MarkerOptions().position(eventLocation).title("Event Location"));
-
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(deviceLocation, 13));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(deviceLocation, 12));
 
             locationListener = new LocationListener() {
                 @Override
@@ -315,13 +296,27 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         // for ActivityCompat#requestPermissions for more details.
                         return;
                     }
-                    locationManager.requestLocationUpdates("gps", 5000, 0, (android.location.LocationListener) locationListener);
+                    locationManager.requestLocationUpdates("gps", 5000, 100, (android.location.LocationListener) locationListener);
                 }
             };
 
-            init();
+
             getEvents("club", lat, lng);
-            setUpRecyclerView();
+
+
+            mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+
+                @Override
+                public boolean onMarkerClick(Marker arg0) {
+                    if (arg0.getTitle().equals(arg0.getTitle())) { // if marker source is clicked
+                        int eventPos = eventsAdapter.getItemNamePosition(arg0.getTitle());
+                        eventsRecyclerView.smoothScrollToPosition(eventPos);
+                    }
+
+                    return false;
+                }
+
+            });
 
         } else {
             // Show rationale and request permission.
@@ -363,84 +358,58 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    //Create the generateKey method that we’ll use to gain access to the Android keystore and generate the encryption key//
-
-    @TargetApi(Build.VERSION_CODES.M)
-    private void generateKey() throws FingerprintException {
-        try {
-            // Obtain a reference to the Keystore using the standard Android keystore container identifier (“AndroidKeystore”)//
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
-
-            //Generate the key//
-            keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
-
-            //Initialize an empty KeyStore//
-            keyStore.load(null);
-
-            //Initialize the KeyGenerator//
-            keyGenerator.init(new
-
-                    //Specify the operation(s) this key can be used for//
-                    KeyGenParameterSpec.Builder(KEY_NAME,
-                    KeyProperties.PURPOSE_ENCRYPT |
-                            KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-
-                    //Configure this key so that the user has to confirm their identity with a fingerprint each time they want to use it//
-                    .setUserAuthenticationRequired(true)
-                    .setEncryptionPaddings(
-                            KeyProperties.ENCRYPTION_PADDING_PKCS7)
-                    .build());
-
-            //Generate the key//
-            keyGenerator.generateKey();
-
-        } catch (KeyStoreException
-                | NoSuchAlgorithmException
-                | NoSuchProviderException
-                | InvalidAlgorithmParameterException
-                | CertificateException
-                | IOException exc) {
-            exc.printStackTrace();
-            throw new FingerprintException(exc);
-        }
+    public void startDetailsActivity(View view) {
+        Intent intent = new Intent(MainActivity.this, DetailsActivity.class);
+        startActivity(intent);
     }
 
-    //Create a new method that we’ll use to initialize our cipher//
-    @TargetApi(Build.VERSION_CODES.M)
-    public boolean initCipher() {
-        try {
-            //Obtain a cipher instance and configure it with the properties required for fingerprint authentication//
-            cipher = Cipher.getInstance(
-                    KeyProperties.KEY_ALGORITHM_AES + "/"
-                            + KeyProperties.BLOCK_MODE_CBC + "/"
-                            + KeyProperties.ENCRYPTION_PADDING_PKCS7);
-        } catch (NoSuchAlgorithmException |
-                NoSuchPaddingException e) {
-            throw new RuntimeException("Failed to get Cipher", e);
-        }
-
-        try {
-            keyStore.load(null);
-            SecretKey key = (SecretKey) keyStore.getKey(KEY_NAME,
-                    null);
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-            //Return true if the cipher has been initialized successfully//
-            return true;
-        } catch (KeyPermanentlyInvalidatedException e) {
-
-            //Return false if cipher initialization failed//
-            return false;
-        } catch (KeyStoreException | CertificateException
-                | UnrecoverableKeyException | IOException
-                | NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new RuntimeException("Failed to init Cipher", e);
-        }
+    public int getEventSaved(int position) {
+        return position;
     }
 
-    private class FingerprintException extends Exception {
-        public FingerprintException(Exception e) {
-            super(e);
-        }
+    @Override
+    public void onClick(View view, final int position) {
+        Log.d(TAG, "onClick: " + position);
+        savedEventList = new ArrayList<>(0);
+        savedEventList.add(new Integer(position));
+        new AlertDialog.Builder(this)
+                .setTitle("\"" + eventList.get(position).getName().getText() + "\"")
+                .setMessage("Would you like to save this event to your database?")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+
+
+                        Date date1 = null;
+                        String stringDate = "";
+                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                        try {
+                            date1 = formatter.parse(eventList.get(position).getStart().getLocal());
+                            SimpleDateFormat formatter2 = new SimpleDateFormat("M-dd-yyyy h:mm a");
+                            stringDate = formatter2.format(date1);
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+                        String des1 = eventList.get(position).getDescription().getText();
+
+                        saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText() , stringDate, eventList.get(position).getUrl());
+                        Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
+                        /*for (int j = 0; j < savedEventList.size(); j++) {
+                            Log.d(TAG, "savedEventList: " + savedEventList.get(j).toString());
+                        }*/
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        for (int j = 0; j < savedEventList.size(); j++) {
+
+                        }
+                        Log.d(TAG, "savedEventList: " + savedEventList.size());
+                        Toast.makeText(MainActivity.this, "Declined", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
     }
 }

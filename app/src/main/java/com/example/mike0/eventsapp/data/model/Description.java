@@ -16,7 +16,7 @@ public class Description implements Parcelable
     @SerializedName("html")
     @Expose
     private String html;
-    public final static Parcelable.Creator<Description> CREATOR = new Creator<Description>() {
+    public final static Creator<Description> CREATOR = new Creator<Description>() {
 
 
         @SuppressWarnings({

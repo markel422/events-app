@@ -27,11 +27,11 @@ public class Logo implements Parcelable
     private String aspectRatio;
     @SerializedName("edge_color")
     @Expose
-    private Object edgeColor;
+    private String edgeColor;
     @SerializedName("edge_color_set")
     @Expose
     private Boolean edgeColorSet;
-    public final static Parcelable.Creator<Logo> CREATOR = new Creator<Logo>() {
+    public final static Creator<Logo> CREATOR = new Creator<Logo>() {
 
 
         @SuppressWarnings({
@@ -54,7 +54,7 @@ public class Logo implements Parcelable
         this.id = ((String) in.readValue((String.class.getClassLoader())));
         this.url = ((String) in.readValue((String.class.getClassLoader())));
         this.aspectRatio = ((String) in.readValue((String.class.getClassLoader())));
-        this.edgeColor = ((Object) in.readValue((Object.class.getClassLoader())));
+        this.edgeColor = ((String) in.readValue((String.class.getClassLoader())));
         this.edgeColorSet = ((Boolean) in.readValue((Boolean.class.getClassLoader())));
     }
 
@@ -101,11 +101,11 @@ public class Logo implements Parcelable
         this.aspectRatio = aspectRatio;
     }
 
-    public Object getEdgeColor() {
+    public String getEdgeColor() {
         return edgeColor;
     }
 
-    public void setEdgeColor(Object edgeColor) {
+    public void setEdgeColor(String edgeColor) {
         this.edgeColor = edgeColor;
     }
 

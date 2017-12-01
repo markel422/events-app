@@ -16,7 +16,7 @@ public class TopLeft implements Parcelable
     @SerializedName("y")
     @Expose
     private Integer y;
-    public final static Parcelable.Creator<TopLeft> CREATOR = new Creator<TopLeft>() {
+    public final static Creator<TopLeft> CREATOR = new Creator<TopLeft>() {
 
 
         @SuppressWarnings({

@@ -15,11 +15,11 @@ public class Original implements Parcelable
     private String url;
     @SerializedName("width")
     @Expose
-    private Integer width;
+    private Object width;
     @SerializedName("height")
     @Expose
-    private Integer height;
-    public final static Parcelable.Creator<Original> CREATOR = new Creator<Original>() {
+    private Object height;
+    public final static Creator<Original> CREATOR = new Creator<Original>() {
 
 
         @SuppressWarnings({
@@ -38,8 +38,8 @@ public class Original implements Parcelable
 
     protected Original(Parcel in) {
         this.url = ((String) in.readValue((String.class.getClassLoader())));
-        this.width = ((Integer) in.readValue((Integer.class.getClassLoader())));
-        this.height = ((Integer) in.readValue((Integer.class.getClassLoader())));
+        this.width = ((Object) in.readValue((Object.class.getClassLoader())));
+        this.height = ((Object) in.readValue((Object.class.getClassLoader())));
     }
 
     public Original() {
@@ -53,19 +53,19 @@ public class Original implements Parcelable
         this.url = url;
     }
 
-    public Integer getWidth() {
+    public Object getWidth() {
         return width;
     }
 
-    public void setWidth(Integer width) {
+    public void setWidth(Object width) {
         this.width = width;
     }
 
-    public Integer getHeight() {
+    public Object getHeight() {
         return height;
     }
 
-    public void setHeight(Integer height) {
+    public void setHeight(Object height) {
         this.height = height;
     }
 

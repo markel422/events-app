@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">EventsApp</string>
+    <string name="fingerprintlogin">Fingerprint Authentication</string>
     <string name="title_activity_main">Main</string>
     <string name="instructions">Place your fingertip on the Home button to verify your identity</string>
+    <string name="details_btn_text">Go To Details</string>
+    <string name="app_details">Event Details List</string>
+    <string name="alt_login_text">Login Without Authentication</string>
+    <string name="lbl_result">Read: ID: %1$d \nTitle: %2$s \nDescription: %3$s \nTime: %4$s \nURL: %5$s</string>
 </resources>

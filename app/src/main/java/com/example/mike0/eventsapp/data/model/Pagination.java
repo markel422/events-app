@@ -25,7 +25,7 @@ public class Pagination implements Parcelable
     @SerializedName("has_more_items")
     @Expose
     private Boolean hasMoreItems;
-    public final static Parcelable.Creator<Pagination> CREATOR = new Creator<Pagination>() {
+    public final static Creator<Pagination> CREATOR = new Creator<Pagination>() {
 
 
         @SuppressWarnings({
