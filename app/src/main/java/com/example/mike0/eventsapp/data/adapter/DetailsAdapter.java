@@ -2,6 +2,7 @@ package com.example.mike0.eventsapp.data.adapter;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
@@ -9,11 +10,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.mike0.eventsapp.R;
+import com.example.mike0.eventsapp.data.database.EventReaderContract.EventEntry;
 import com.example.mike0.eventsapp.data.model.Event;
 import com.example.mike0.eventsapp.data.model.ItemClickListener;
 import com.example.mike0.eventsapp.main.MainActivity;
@@ -28,43 +31,39 @@ import java.util.List;
  * Created by mike0 on 11/19/2017.
  */
 
-public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder> {
+public class DetailsAdapter extends RecyclerView.Adapter<DetailsAdapter.ViewHolder> {
 
     public static final String TAG = "tag";
 
-    MainActivity activity;
+    CursorAdapter cursorAdapter;
 
     private Context context;
-    private List<Event> eventsList;
 
-    private int globalPosition, lastClick, currentClick, itemSelectState, defaultTextColors;
+    private int lastClick, currentClick, itemSelectState, defaultTextColors;
 
     private List<Integer> savedList = new ArrayList<>(0);
 
-    private boolean saveEvent, itemClicked;
-
     private ItemClickListener clickListener;
 
-    public EventsAdapter(Context context, List<Event> resultList, List<Integer> savedList) {
+    public DetailsAdapter(Context context, Cursor cursor) {
         this.context = context;
-        this.eventsList = resultList;
 
-        this.clickListener = (ItemClickListener) context;
-        this.savedList = savedList;
         itemSelectState = 0;
+        cursorAdapter = new CursorAdapter(context, cursor, 0) {
+            @Override
+            public View newView(Context context, Cursor cursor, ViewGroup viewGroup) {
+                return null;
+            }
+
+            @Override
+            public void bindView(View view, Context context, Cursor cursor) {
+
+            }
+        };
     }
 
     public void updateDataSet(List<Event> resultList) {
-        this.eventsList = resultList;
         notifyDataSetChanged();
-    }
-
-    public int getGlobalPosition() {
-        return globalPosition;
-    }
-
-    public void getSavedEventState(boolean state) {
-        saveEvent = state;
     }
 
     @Override
@@ -77,13 +76,26 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
-        holder.eventsTitle.setText(eventsList.get(position).getName().getText());
+        cursorAdapter.getCursor().moveToPosition(position);
+        cursorAdapter.bindView(holder.itemView, context, cursorAdapter.getCursor());
+        holder.eventsTitle.setText(cursorAdapter.getCursor().getString(cursorAdapter.getCursor().getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TITLE)));
 
-        if (eventsList.get(position).getDescription().getText() != null) {
-            holder.eventsDesc.setText(eventsList.get(position).getDescription().getText().substring(0, 175) + "...");
+        if (cursorAdapter.getCursor().getString(cursorAdapter.getCursor().getColumnIndexOrThrow(EventEntry.COLUMN_NAME_DESCRIPTION)) != null) {
+            holder.eventsDesc.setText(cursorAdapter.getCursor().getString(cursorAdapter.getCursor().getColumnIndexOrThrow(EventEntry.COLUMN_NAME_DESCRIPTION)).substring(0, 175) + "...");
+        } else {
+            holder.eventsDesc.setText(cursorAdapter.getCursor().getString(cursorAdapter.getCursor().getColumnIndexOrThrow(EventEntry.COLUMN_NAME_DESCRIPTION)));
         }
 
-        Date date1 = null;
+        holder.eventsTime.setText(cursorAdapter.getCursor().getString(cursorAdapter.getCursor().getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TIME)));
+        holder.eventsWebpage.setText(cursorAdapter.getCursor().getString(cursorAdapter.getCursor().getColumnIndexOrThrow(EventEntry.COLUMN_NAME_URL)));
+
+        holder.favIcon.setVisibility(View.VISIBLE);
+
+        /*if (eventsList.get(position).getDescription().getText() != null) {
+            holder.eventsDesc.setText(eventsList.get(position).getDescription().getText().substring(0, 175) + "...");
+        }*/
+
+        /*Date date1 = null;
         String newDate = "";
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         try {
@@ -92,10 +104,10 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
             e.printStackTrace();
         }
         SimpleDateFormat formatter2 = new SimpleDateFormat("EEE, MMM d, yyyy h:mm a");
-        newDate = formatter2.format(date1);
-        holder.eventsTime.setText("Start Date:  " + newDate);
+        newDate = formatter2.format(date1);*/
+        /*holder.eventsTime.setText("Start Date:  " + newDate);
 
-        holder.eventsWebpage.setText(eventsList.get(position).getUrl());
+        holder.eventsWebpage.setText(eventsList.get(position).getUrl());*/
 
         /*holder.linearLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -198,17 +210,7 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
 
     @Override
     public int getItemCount() {
-        return eventsList.size();
-    }
-
-    public int getItemNamePosition(String name) {
-        for (int i = 0; i < eventsList.size(); i++) {
-            if (eventsList.get(i).getName().getText().equals(name)) {
-                return i;
-            }
-        }
-
-        return -1;
+        return cursorAdapter.getCount();
     }
 
     public void setClickListener(ItemClickListener itemClickListener) {
@@ -245,40 +247,13 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         public void onClick(View view) {
             clickListener.onClick(view, getAdapterPosition());
 
-            /*if (savedList != null) {
-                for (int i = 0; i < savedList.size(); i++) {
-                    Log.d(TAG, "onBindViewHolder List: " + savedList.get(i));
-
-
-                    if (favIcon.getVisibility() == View.INVISIBLE) {
-                        favIcon.setVisibility(View.VISIBLE);
-                    }
-                }
-                notifyDataSetChanged();
-            }*/
-            /*if (savedList != null) {
-                if (activity.getEventSaved() != false) {
-                    favIcon.setVisibility(View.VISIBLE);
-                } else if (activity.getEventSaved() == false) {
-                    favIcon.setVisibility(View.INVISIBLE);
-                }
-            }*/
-            if (saveEvent != false) {
+            /*if (saveEvent != false) {
                 Log.d(TAG, "onClick: " + saveEvent);
                 favIcon.setVisibility(View.VISIBLE);
             } else {
                 Log.d(TAG, "onClick: " + saveEvent);
                 favIcon.setVisibility(View.INVISIBLE);
-            }
-
-
+            }*/
         }
-
-        /*@Override
-        public void onClick(View view) {
-            Context context = view.getContext();
-            Books result = eventsList.get(getAdapterPosition());
-            context.startActivity(DetailActivity.getDetailActivityIntent(context, result));
-        }*/
     }
 }

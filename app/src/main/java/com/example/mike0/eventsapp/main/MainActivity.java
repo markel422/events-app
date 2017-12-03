@@ -52,6 +52,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import net.sqlcipher.Cursor;
 import net.sqlcipher.database.SQLiteDatabase;
@@ -91,10 +92,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     ArrayList<Event> eventList;
     ArrayList<Integer> savedEventList;
 
+    boolean savedItem = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        savedEventList = new ArrayList<>(0);
 
         SQLiteDatabase.loadLibs(this);
 
@@ -143,7 +148,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         eventsRecyclerView.setLayoutManager(linearLayoutManager);
 
-        eventsAdapter = new EventsAdapter(this, new ArrayList<Event>(0));
+        eventsAdapter = new EventsAdapter(this, new ArrayList<Event>(0), savedEventList);
         eventsRecyclerView.setAdapter(eventsAdapter);
 
         eventsAdapter.setClickListener(this);
@@ -363,15 +368,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         startActivity(intent);
     }
 
-    public int getEventSaved(int position) {
-        return position;
+    public boolean getEventSaved() {
+        return savedItem;
     }
 
     @Override
     public void onClick(View view, final int position) {
         Log.d(TAG, "onClick: " + position);
-        savedEventList = new ArrayList<>(0);
-        savedEventList.add(new Integer(position));
+
         new AlertDialog.Builder(this)
                 .setTitle("\"" + eventList.get(position).getName().getText() + "\"")
                 .setMessage("Would you like to save this event to your database?")
@@ -379,7 +383,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-
+                        savedEventList.add(position);
+                        savedItem = true;
+                        eventsAdapter.getSavedEventState(savedItem);
+                        eventsAdapter.notifyItemChanged(position);
 
                         Date date1 = null;
                         String stringDate = "";
@@ -394,20 +401,27 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         String des1 = eventList.get(position).getDescription().getText();
 
                         saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText() , stringDate, eventList.get(position).getUrl());
+
+                        Log.d(TAG, "savedEventList size: " + savedEventList.size());
+                        for (int j = 0; j < savedEventList.size(); j++) {
+                            Log.d(TAG, "savedEventList: " + savedEventList.get(j));
+                        }
+
                         Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
-                        /*for (int j = 0; j < savedEventList.size(); j++) {
-                            Log.d(TAG, "savedEventList: " + savedEventList.get(j).toString());
-                        }*/
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
+                        savedItem = false;
+                        eventsAdapter.getSavedEventState(savedItem);
+                        eventsAdapter.notifyItemChanged(position);
+                        Log.d(TAG, "savedEventList size: " + savedEventList.size());
                         for (int j = 0; j < savedEventList.size(); j++) {
-
+                            Log.d(TAG, "savedEventList list: " + savedEventList.get(j));
                         }
-                        Log.d(TAG, "savedEventList: " + savedEventList.size());
-                        Toast.makeText(MainActivity.this, "Declined", Toast.LENGTH_SHORT).show();
+
+                        Toast.makeText(MainActivity.this, "Cancelled", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .show();
