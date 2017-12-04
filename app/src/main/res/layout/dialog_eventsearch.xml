@@ -15,9 +15,8 @@
         android:id="@+id/search_tv"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/zipcode"
-        android:inputType="number"
-        android:maxLength="5" />
+        android:hint="@string/event"
+        android:inputType="text" />
 
     <TableRow
         android:layout_width="match_parent"

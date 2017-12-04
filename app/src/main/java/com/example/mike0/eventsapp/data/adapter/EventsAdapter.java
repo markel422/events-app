@@ -76,7 +76,7 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
     public void onBindViewHolder(final ViewHolder holder, int position) {
         holder.eventsTitle.setText(eventsList.get(position).getName().getText());
 
-        if (eventsList.get(position).getDescription().getText() != null) {
+        if (eventsList.get(position).getDescription().getText() != null && eventsList.get(position).getDescription().getText().length() > 175) {
             holder.eventsDesc.setText(eventsList.get(position).getDescription().getText().substring(0, 175) + "...");
         }
 

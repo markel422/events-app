@@ -2,6 +2,7 @@ package com.example.mike0.eventsapp.main;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -19,6 +20,8 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -71,6 +74,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     SharedPreferences savedEventPref;
 
+    EditText searchTV;
+
     EventsService service;
 
     private RecyclerView eventsRecyclerView;
@@ -85,7 +90,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private LocationManager locationManager;
     private LocationListener locationListener;
 
-    String lat, lng;
+    String lat, lng, editTextSearch;
 
     int eventSize;
 
@@ -113,7 +118,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-
         // If you’ve set your app’s minSdkVersion to anything lower than 23, then you’ll need to verify that the device is running Marshmallow
         // or higher before executing any fingerprint-related code
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -124,13 +128,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             mapFragment.getMapAsync(this);
         }
         init();
+        getInitialEventSearch();
 
         Gson gson = new Gson();
         String response = savedEventPref.getString("savedEvents", null);
 
-        SharedPreferences.Editor editor = savedEventPref.edit();
+        /*SharedPreferences.Editor editor = savedEventPref.edit();
 
-        /*editor.remove("savedEvents");
+        editor.remove("savedEvents");
         editor.apply();*/
 
         if (savedEventList.isEmpty() && !response.isEmpty()) {
@@ -172,8 +177,52 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .create(EventsService.class);
     }
 
-    public void searchMap(String searchWord) {
+    public void getInitialEventSearch() {
+        final Dialog dialog = new Dialog(MainActivity.this);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setTitle("Enter an Event Title");
+        dialog.setContentView(R.layout.dialog_eventsearch);
+        // Get the layout inflater
+        dialog.show();
 
+        searchTV = (EditText) dialog.findViewById(R.id.search_tv);
+        Button okBtn = (Button) dialog.findViewById(R.id.btn_ok);
+        final Button cancelBtn = (Button) dialog.findViewById(R.id.btn_cancel);
+
+        okBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!searchTV.equals("")) {
+                    editTextSearch = searchTV.getText().toString();
+                    getEvents(editTextSearch, lat, lng);
+                } else {
+                    getEvents("events", lat, lng);
+                }
+
+                dialog.cancel();
+            }
+        });
+
+        cancelBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                /*new AlertDialog.Builder(dialog.getContext())
+                        .setMessage("A zipcode must be entered to proceed.\n\nAre you sure you want to exit?")
+                        .setCancelable(false)
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                MainActivity.this.finish();
+                            }
+                        })
+                        .setNegativeButton("No", null)
+                        .show();
+
+                */
+                getEvents("events", lat, lng);
+                dialog.cancel();
+            }
+        });
     }
 
     private void setUpRecyclerView() {
@@ -190,12 +239,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         eventsAdapter.setClickListener(this);
     }
 
-    public void getEvents(String title, String lat, String lng) {
+    public void getEvents(final String title, String lat, String lng) {
         service.getEvents(title, "5mi", lat, lng, API_KEY).enqueue(new Callback<EventsAPI>() {
             @Override
             public void onResponse(Call<EventsAPI> call, Response<EventsAPI> response) {
                 if (response.isSuccessful()) {
-                    totalEvents.setText("Total results near your location: " + response.body().getEvents().size());
+                    totalEvents.setText("Total results near your location: " + response.body().getEvents().size() + " for " +  "\"" + title +"\"");
 
                     eventsAdapter.updateDataSet(response.body().getEvents());
                     eventMarkList = new ArrayList<>(0);
@@ -217,9 +266,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         //Log.d(TAG, "onResponse: Description: " + response.body().getEvents().get(i).getDescription().getText());
                         String des1 = response.body().getEvents().get(i).getDescription().getText();
 
-                        if (des1 != null) {
+                        /*if (des1 != null) {
                             Log.d(TAG, "Short Description: " + des1.substring(0, 100) + "...");
-                        }
+                        }*/
 
                         Log.d(TAG, "Event Time: " + temp);
                         Log.d(TAG, "Event Webpage: " + response.body().getEvents().get(i).getUrl());
@@ -400,9 +449,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     locationManager.requestLocationUpdates("gps", 5000, 100, (android.location.LocationListener) locationListener);
                 }
             };
-
-
-            getEvents("club", lat, lng);
 
 
             mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {

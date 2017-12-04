@@ -10,4 +10,5 @@
     <string name="fav_num">0</string>
     <string name="dialog_title_name">Enter an Event Title</string>
     <string name="zipcode">fgg</string>
+    <string name="event">If empty, search default will be \"events\"</string>
 </resources>
