@@ -2,6 +2,7 @@ package com.example.mike0.eventsapp.data.adapter;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -99,6 +100,11 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
             for (int a = 0; a < eventsList.size(); a++) {
                 listTemp.add(eventsList.get(a).getUrl());
             }
+            int firstItem = listTemp.indexOf(listTemp.get(0));
+            for (int i = firstItem; i > -1; i--) {
+                holder.favIcon.setVisibility(View.INVISIBLE);
+            }
+
             for (int i = 0; i < listTemp.size(); i++) {
                 for (int j = 0; j < savedList.size(); j++) {
                     if (listTemp.get(i).equals(savedList.get(j))) {

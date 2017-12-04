@@ -133,9 +133,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         Gson gson = new Gson();
         String response = savedEventPref.getString("savedEvents", null);
 
-        /*SharedPreferences.Editor editor = savedEventPref.edit();
+        SharedPreferences.Editor editor = savedEventPref.edit();
 
-        editor.remove("savedEvents");
+        /*editor.remove("savedEvents");
         editor.apply();*/
 
         if (savedEventList.isEmpty() && !response.isEmpty()) {
@@ -192,6 +192,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         okBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 if (!searchTV.equals("")) {
                     editTextSearch = searchTV.getText().toString();
                     getEvents(editTextSearch, lat, lng);
@@ -207,18 +208,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
 
-                /*new AlertDialog.Builder(dialog.getContext())
-                        .setMessage("A zipcode must be entered to proceed.\n\nAre you sure you want to exit?")
-                        .setCancelable(false)
-                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                MainActivity.this.finish();
-                            }
-                        })
-                        .setNegativeButton("No", null)
-                        .show();
-
-                */
                 getEvents("events", lat, lng);
                 dialog.cancel();
             }
@@ -244,7 +233,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onResponse(Call<EventsAPI> call, Response<EventsAPI> response) {
                 if (response.isSuccessful()) {
-                    totalEvents.setText("Total results near your location: " + response.body().getEvents().size() + " for " +  "\"" + title +"\"");
+                    totalEvents.setText("Total results near your location: " + response.body().getEvents().size() + " for " + "\"" + title + "\"");
 
                     eventsAdapter.updateDataSet(response.body().getEvents());
                     eventMarkList = new ArrayList<>(0);
@@ -518,16 +507,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public void onClick(View view, final int position) {
         Log.d(TAG, "onClick: " + position);
 
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(MainActivity.this)
                 .setTitle("\"" + eventList.get(position).getName().getText() + "\"")
                 .setMessage("Would you like to save this event to your database?")
                 .setCancelable(false)
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        savedEventList.add(eventList.get(position).getUrl());
-                        eventsAdapter.getSavedEventState(savedEventList);
-                        eventsAdapter.notifyItemChanged(position);
+
 
                         Date date1 = null;
                         String stringDate = "";
@@ -539,23 +526,34 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         } catch (ParseException e) {
                             e.printStackTrace();
                         }
-                        String des1 = eventList.get(position).getDescription().getText();
-
-                        saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
-
-                        //Set<String> returnedSet = savedEventPref.getStringSet("savedEvents", null);
-
-                        Gson gson = new Gson();
-                        String response = savedEventPref.getString("savedEvents", null);
 
                         if (savedEventList.isEmpty()) {
-                            savedEventList = gson.fromJson(response, new TypeToken<List<String>>() {
-                            }.getType());
+                            savedEventList.add(eventList.get(position).getUrl());
                             eventsAdapter.getSavedEventState(savedEventList);
+                            eventsAdapter.notifyItemChanged(position);
+                            saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
+                            Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
 
-                            Log.d(TAG, "SAVED savedList size: " + savedEventList.size());
-                            for (int j = 0; j < savedEventList.size(); j++) {
-                                Log.d(TAG, "SAVED savedList: " + savedEventList.get(j));
+                        } else if (!savedEventList.isEmpty()) {
+                            if (savedEventList.contains(eventList.get(position).getUrl())) {
+
+                                new AlertDialog.Builder(MainActivity.this)
+                                        .setTitle("\"" + eventList.get(position).getName().getText() + "\"")
+                                        .setMessage("This event already exists in the database.")
+                                        .setCancelable(false)
+                                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                                            }
+                                        })
+                                        .show();
+                            } else {
+                                savedEventList.add(eventList.get(position).getUrl());
+                                eventsAdapter.getSavedEventState(savedEventList);
+                                eventsAdapter.notifyItemChanged(position);
+                                saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
+                                Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
                             }
                         }
 
@@ -564,7 +562,21 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                             Log.d(TAG, "savedEventList: " + savedEventList.get(j));
                         }
 
-                        Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
+                        Gson gson = new Gson();
+                        String response = savedEventPref.getString("savedEvents", null);
+
+                        if (savedEventList.isEmpty() && !response.isEmpty()) {
+
+                            savedEventList = gson.fromJson(response, new TypeToken<List<String>>() {
+                            }.getType());
+                            eventsAdapter.getSavedEventState(savedEventList);
+                            Log.d(TAG, "SAVED savedList size: " + savedEventList.size());
+
+                            for (int j = 0; j < savedEventList.size(); j++) {
+                                Log.d(TAG, "SAVED savedList: " + savedEventList.get(j));
+                            }
+                        }
+
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
