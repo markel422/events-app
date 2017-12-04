@@ -2,22 +2,18 @@ package com.example.mike0.eventsapp.main;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.KeyguardManager;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.hardware.fingerprint.FingerprintManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyPermanentlyInvalidatedException;
-import android.security.keystore.KeyProperties;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -27,7 +23,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.mike0.eventsapp.data.FingerprintHandler;
 import com.example.mike0.eventsapp.R;
 import com.example.mike0.eventsapp.data.adapter.EventsAdapter;
 import com.example.mike0.eventsapp.data.api.EventsService;
@@ -46,13 +41,17 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import net.sqlcipher.Cursor;
 import net.sqlcipher.database.SQLiteDatabase;
@@ -63,12 +62,14 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback, ItemClickListener{
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, ItemClickListener {
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 10;
     private static final String TAG = "tag";
 
     final static String API_KEY = "XEJ7EQTKLAJUUC5LOOPS";
+
+    SharedPreferences savedEventPref;
 
     EventsService service;
 
@@ -90,14 +91,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     ArrayList<EventMarkerList> eventMarkList;
     ArrayList<Event> eventList;
-    ArrayList<Integer> savedEventList;
-
-    boolean savedItem = false;
+    ArrayList<String> savedEventList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        savedEventPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         savedEventList = new ArrayList<>(0);
 
@@ -123,13 +124,44 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             mapFragment.getMapAsync(this);
         }
         init();
+
+        Gson gson = new Gson();
+        String response = savedEventPref.getString("savedEvents", null);
+
+        SharedPreferences.Editor editor = savedEventPref.edit();
+
+        /*editor.remove("savedEvents");
+        editor.apply();*/
+
+        if (savedEventList.isEmpty() && !response.isEmpty()) {
+            savedEventList = gson.fromJson(response, new TypeToken<List<String>>() {
+            }.getType());
+
+            Log.d(TAG, "SAVED savedList size: " + savedEventList.size());
+            for (int j = 0; j < savedEventList.size(); j++) {
+                Log.d(TAG, "SAVED savedList: " + savedEventList.get(j));
+            }
+        }
+
         setUpRecyclerView();
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        //database.close();
+    protected void onPause() {
+        super.onPause();
+
+        SharedPreferences.Editor editor = savedEventPref.edit();
+
+        Gson gson = new Gson();
+
+        String json = gson.toJson(savedEventList);
+
+        editor.remove("savedEvents").apply();
+
+        editor.putString("savedEvents", json);
+        editor.apply();
+
+        Log.d(TAG, "onPause saved info: " + json);
     }
 
     public void init() {
@@ -138,6 +170,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
                 .create(EventsService.class);
+    }
+
+    public void searchMap(String searchWord) {
+
     }
 
     private void setUpRecyclerView() {
@@ -196,7 +232,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     }
 
 
-
                     //Log.d(TAG, "Event Time: " + response.body().getEvents().get(0).getStart().getLocal());
                     //Log.d(TAG, "Time Converted: " + date1);
 
@@ -238,6 +273,66 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         //db = FeedReaderDbHelper.getInstance(this).getWritableDatabase("");
     }
 
+    private void readEvents() {
+        SQLiteDatabase db = EventReaderDBHelper.getInstance(this).getWritableDatabase("somePass");
+
+        eventsRecyclerView = (RecyclerView) findViewById(R.id.recycler_events);
+        eventsRecyclerView.setHasFixedSize(true);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+
+        eventsRecyclerView.setLayoutManager(linearLayoutManager);
+
+
+        String[] projection = {
+                EventEntry._ID,
+                EventEntry.COLUMN_NAME_TITLE,
+                EventEntry.COLUMN_NAME_DESCRIPTION,
+                EventEntry.COLUMN_NAME_TIME,
+                EventEntry.COLUMN_NAME_URL
+        };
+        /*
+        String selection = FeedEntry.COLUMN_NAME_TITLE + " = ?";
+
+
+        String[] selectionArg = {
+                "Record title"
+        };
+        String sortOrder = FeedEntry.COLUMN_NAME_SUBTITLE + "DESC";
+        */
+
+        Cursor cursor = db.query(
+                EventEntry.TABLE_NAME,        // TABLE
+                projection,                  // Projection
+                null,                        // Selection (WHERE)
+                null,                        // Values for selection
+                null,                        // Group by
+                null,                        // Filters
+                null                         // Sort order
+        );
+
+        while (cursor.moveToNext()) {
+            //StringBuilder dataResult = new StringBuilder(String.valueOf(resultTV.getText().toString()));
+            long entryId = cursor.getLong(cursor.getColumnIndexOrThrow(EventEntry._ID));
+            String entryTitle = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TITLE));
+            String entryDesc = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_DESCRIPTION));
+            String entryTime = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TIME));
+            String entryUrl = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_URL));
+
+            Log.d(TAG, "readRecord: id: " + entryId + " title: " + entryTitle + " description: " + entryDesc + " time: " + entryTime + " url: " + entryUrl);
+            //resultTV.setText(dataResult.append(String.format(getString(R.string.lbl_result), entryId, entryTitle, entryDesc, entryTime, entryUrl)));
+        }
+        for (int i = 0; i < cursor.getCount(); i++) {
+            if (cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TITLE)).equals(eventList.get(i).getName().getText().toString())) {
+                Log.d(TAG, "Yes Sexy Croc Baby!");
+            }
+        }
+
+        //cursor.close();
+        db.close();
+        //detailsAdapter.updateDataSet(eventList);
+    }
+
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -277,6 +372,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
             lat = String.valueOf(location.getLatitude());
             lng = String.valueOf(location.getLongitude());
+
 
             Log.d(TAG, "onSuccess: " + location.getLatitude());
             Log.d(TAG, "onSuccess: " + location.getLongitude());
@@ -368,8 +464,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         startActivity(intent);
     }
 
-    public boolean getEventSaved() {
-        return savedItem;
+    public List<String> getEventSaved() {
+        return savedEventList;
     }
 
     @Override
@@ -383,9 +479,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        savedEventList.add(position);
-                        savedItem = true;
-                        eventsAdapter.getSavedEventState(savedItem);
+                        savedEventList.add(eventList.get(position).getUrl());
+                        eventsAdapter.getSavedEventState(savedEventList);
                         eventsAdapter.notifyItemChanged(position);
 
                         Date date1 = null;
@@ -400,7 +495,23 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                         String des1 = eventList.get(position).getDescription().getText();
 
-                        saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText() , stringDate, eventList.get(position).getUrl());
+                        saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
+
+                        //Set<String> returnedSet = savedEventPref.getStringSet("savedEvents", null);
+
+                        Gson gson = new Gson();
+                        String response = savedEventPref.getString("savedEvents", null);
+
+                        if (savedEventList.isEmpty()) {
+                            savedEventList = gson.fromJson(response, new TypeToken<List<String>>() {
+                            }.getType());
+                            eventsAdapter.getSavedEventState(savedEventList);
+
+                            Log.d(TAG, "SAVED savedList size: " + savedEventList.size());
+                            for (int j = 0; j < savedEventList.size(); j++) {
+                                Log.d(TAG, "SAVED savedList: " + savedEventList.get(j));
+                            }
+                        }
 
                         Log.d(TAG, "savedEventList size: " + savedEventList.size());
                         for (int j = 0; j < savedEventList.size(); j++) {
@@ -413,13 +524,26 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        savedItem = false;
-                        eventsAdapter.getSavedEventState(savedItem);
+                        Gson gson = new Gson();
+                        String response = savedEventPref.getString("savedEvents", null);
+
+                        if (savedEventList.isEmpty() && !response.isEmpty()) {
+                            savedEventList = gson.fromJson(response, new TypeToken<List<String>>() {
+                            }.getType());
+
+                            Log.d(TAG, "SAVED savedList size: " + savedEventList.size());
+                            for (int j = 0; j < savedEventList.size(); j++) {
+                                Log.d(TAG, "SAVED savedList: " + savedEventList.get(j));
+                            }
+                        }
                         eventsAdapter.notifyItemChanged(position);
+
                         Log.d(TAG, "savedEventList size: " + savedEventList.size());
                         for (int j = 0; j < savedEventList.size(); j++) {
-                            Log.d(TAG, "savedEventList list: " + savedEventList.get(j));
+                            Log.d(TAG, "savedEventList: " + savedEventList.get(j));
                         }
+
+                        //readEvents();
 
                         Toast.makeText(MainActivity.this, "Cancelled", Toast.LENGTH_SHORT).show();
                     }

@@ -8,4 +8,6 @@
     <string name="alt_login_text">Login Without Authentication</string>
     <string name="lbl_result">Read: ID: %1$d \nTitle: %2$s \nDescription: %3$s \nTime: %4$s \nURL: %5$s</string>
     <string name="fav_num">0</string>
+    <string name="dialog_title_name">Enter an Event Title</string>
+    <string name="zipcode">fgg</string>
 </resources>

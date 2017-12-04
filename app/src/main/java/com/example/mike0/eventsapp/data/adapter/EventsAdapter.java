@@ -1,11 +1,7 @@
 package com.example.mike0.eventsapp.data.adapter;
 
 import android.content.Context;
-import android.content.DialogInterface;
-import android.graphics.Color;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,13 +35,14 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
 
     private int globalPosition, lastClick, currentClick, itemSelectState, defaultTextColors;
 
-    private List<Integer> savedList = new ArrayList<>(0);
+    private List<String> savedList = new ArrayList<>(0),
+            listTemp = new ArrayList<>(0);
 
-    private boolean saveEvent, itemClicked;
+    private boolean itemClicked;
 
     private ItemClickListener clickListener;
 
-    public EventsAdapter(Context context, List<Event> resultList, List<Integer> savedList) {
+    public EventsAdapter(Context context, List<Event> resultList, List<String> savedList) {
         this.context = context;
         this.eventsList = resultList;
 
@@ -63,14 +60,14 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         return globalPosition;
     }
 
-    public void getSavedEventState(boolean state) {
-        saveEvent = state;
+    public void getSavedEventState(List<String> state) {
+        savedList = state;
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View itemView = LayoutInflater
-                .from(parent.getContext())
+                .from(context)
                 .inflate(R.layout.item_events, parent, false);
         return new ViewHolder(itemView);
     }
@@ -96,6 +93,25 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         holder.eventsTime.setText("Start Date:  " + newDate);
 
         holder.eventsWebpage.setText(eventsList.get(position).getUrl());
+
+
+        if (!savedList.isEmpty()) {
+            for (int a = 0; a < eventsList.size(); a++) {
+                listTemp.add(eventsList.get(a).getUrl());
+            }
+            for (int i = 0; i < listTemp.size(); i++) {
+                for (int j = 0; j < savedList.size(); j++) {
+                    if (listTemp.get(i).equals(savedList.get(j))) {
+                        if (position == listTemp.indexOf(listTemp.get(i))) {
+                            holder.favIcon.setVisibility(View.VISIBLE);
+                        }
+                        if (position > listTemp.indexOf(listTemp.get(i))) {
+                            holder.favIcon.setVisibility(View.INVISIBLE);
+                        }
+                    }
+                }
+            }
+        }
 
         /*holder.linearLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -244,34 +260,6 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         @Override
         public void onClick(View view) {
             clickListener.onClick(view, getAdapterPosition());
-
-            /*if (savedList != null) {
-                for (int i = 0; i < savedList.size(); i++) {
-                    Log.d(TAG, "onBindViewHolder List: " + savedList.get(i));
-
-
-                    if (favIcon.getVisibility() == View.INVISIBLE) {
-                        favIcon.setVisibility(View.VISIBLE);
-                    }
-                }
-                notifyDataSetChanged();
-            }*/
-            /*if (savedList != null) {
-                if (activity.getEventSaved() != false) {
-                    favIcon.setVisibility(View.VISIBLE);
-                } else if (activity.getEventSaved() == false) {
-                    favIcon.setVisibility(View.INVISIBLE);
-                }
-            }*/
-            if (saveEvent != false) {
-                Log.d(TAG, "onClick: " + saveEvent);
-                favIcon.setVisibility(View.VISIBLE);
-            } else {
-                Log.d(TAG, "onClick: " + saveEvent);
-                favIcon.setVisibility(View.INVISIBLE);
-            }
-
-
         }
 
         /*@Override

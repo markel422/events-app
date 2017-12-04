@@ -18,6 +18,7 @@ import com.example.mike0.eventsapp.data.database.EventReaderDBHelper;
 import com.example.mike0.eventsapp.data.model.Event;
 import com.example.mike0.eventsapp.data.model.ItemClickListener;
 
+import net.sqlcipher.Cursor;
 import net.sqlcipher.database.SQLiteDatabase;
 
 import java.text.ParseException;
@@ -33,7 +34,7 @@ public class DetailsActivity extends AppCompatActivity implements ItemClickListe
     private DetailsAdapter detailsAdapter;
 
     SQLiteDatabase db;
-    android.database.Cursor cursor;
+    Cursor cursor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
