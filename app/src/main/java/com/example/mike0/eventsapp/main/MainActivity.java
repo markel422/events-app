@@ -72,6 +72,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     final static String API_KEY = "XEJ7EQTKLAJUUC5LOOPS";
 
+    SupportMapFragment mapFragment;
+
     MainPresenterImpl presenter;
 
     SharedPreferences savedEventPref;
@@ -125,6 +127,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
+        presenter.init();
+        getInitialEventSearch();
+
         // If you’ve set your app’s minSdkVersion to anything lower than 23, then you’ll need to verify that the device is running Marshmallow
         // or higher before executing any fingerprint-related code
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -134,18 +139,16 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     .findFragmentById(R.id.map);
             mapFragment.getMapAsync(this);
         }
-        presenter.init();
-        getInitialEventSearch();
 
         Gson gson = new Gson();
         String response = savedEventPref.getString("savedEvents", null);
 
-        SharedPreferences.Editor editor = savedEventPref.edit();
+        /*SharedPreferences.Editor editor = savedEventPref.edit();
 
-        /*editor.remove("savedEvents");
+        editor.remove("savedEvents");
         editor.apply();*/
 
-        if (savedEventList.isEmpty() && !response.isEmpty()) {
+        if (savedEventList.isEmpty() && response != null) {
             savedEventList = gson.fromJson(response, new TypeToken<List<String>>() {
             }.getType());
 
@@ -199,7 +202,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     searchTV.setText("events");
                     presenter.getEvents(searchTV.getText().toString(), lat, lng);
                 }
-
                 dialog.cancel();
             }
         });
