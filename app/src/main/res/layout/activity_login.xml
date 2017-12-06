@@ -10,41 +10,38 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
         android:text="@string/fingerprintlogin"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        android:layout_centerHorizontal="true"/>
+        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
 
     <TextView
+        android:id="@+id/textview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:id="@+id/textview"/>
+        android:layout_centerInParent="true" />
 
     <ImageView
+        android:id="@+id/imageView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_fingerprint_black_24dp"
-        android:id="@+id/imageView"
-        android:layout_below="@+id/textView"
+        android:layout_below="@+id/textview"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="36dp" />
+        android:layout_marginTop="36dp"
+        app:srcCompat="@drawable/ic_fingerprint_black_24dp" />
 
     <TextView
+        android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/textView2"
-        android:text="@string/instructions"
         android:layout_below="@+id/imageView"
         android:layout_centerHorizontal="true"
-        android:layout_alignParentStart="true"
         android:layout_marginTop="27dp"
-        android:layout_alignParentLeft="true" />
+        android:text="@string/instructions" />
 
     <Button
         android:id="@+id/alt_login_btn"
-        android:layout_below="@id/textView2"
-        android:text="@string/alt_login_text"
-        android:onClick="startMainActivity"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textView2"
+        android:text="@string/alt_login_text" />
 </RelativeLayout>

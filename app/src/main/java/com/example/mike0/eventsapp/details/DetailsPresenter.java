@@ -1,0 +1,12 @@
+package com.example.mike0.eventsapp.details;
+
+/**
+ * Created by mike0 on 12/5/2017.
+ */
+
+public interface DetailsPresenter {
+
+    void init();
+
+    void readEvents();
+}

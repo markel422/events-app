@@ -65,18 +65,22 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback, ItemClickListener {
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, View.OnClickListener, ItemClickListener, MainView {
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 10;
     private static final String TAG = "tag";
 
     final static String API_KEY = "XEJ7EQTKLAJUUC5LOOPS";
 
+    MainPresenterImpl presenter;
+
     SharedPreferences savedEventPref;
 
     EditText searchTV;
 
-    EventsService service;
+    Button detailsBtn;
+
+    //EventsService service;
 
     private RecyclerView eventsRecyclerView;
     private EventsAdapter eventsAdapter;
@@ -94,20 +98,20 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     int eventSize;
 
-    ArrayList<EventMarkerList> eventMarkList;
-    ArrayList<Event> eventList;
-    ArrayList<String> savedEventList;
+    List<EventMarkerList> eventMarkList;
+    List<Event> eventList;
+    List<String> savedEventList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        presenter = new MainPresenterImpl(this);
+
         savedEventPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         savedEventList = new ArrayList<>(0);
-
-        SQLiteDatabase.loadLibs(this);
 
         /*File databasePath = getDatabasePath("myEventReader.db");
         databasePath.delete();*/
@@ -115,6 +119,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         eventLayoutList = (LinearLayout) findViewById(R.id.linear_events_list);
 
         totalEvents = (TextView) findViewById(R.id.event_results_total);
+
+        detailsBtn = (Button) findViewById(R.id.event_btn_details);
+        detailsBtn.setOnClickListener(this);
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
@@ -127,7 +134,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     .findFragmentById(R.id.map);
             mapFragment.getMapAsync(this);
         }
-        init();
+        presenter.init();
         getInitialEventSearch();
 
         Gson gson = new Gson();
@@ -169,14 +176,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         Log.d(TAG, "onPause saved info: " + json);
     }
 
-    public void init() {
-        service = new Retrofit.Builder()
-                .baseUrl(EventsService.BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-                .create(EventsService.class);
-    }
-
     public void getInitialEventSearch() {
         final Dialog dialog = new Dialog(MainActivity.this);
         dialog.setCanceledOnTouchOutside(false);
@@ -193,11 +192,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
 
-                if (!searchTV.equals("")) {
+                if (!searchTV.getText().toString().equals("")) {
                     editTextSearch = searchTV.getText().toString();
-                    getEvents(editTextSearch, lat, lng);
+                    presenter.getEvents(editTextSearch, lat, lng);
                 } else {
-                    getEvents("events", lat, lng);
+                    searchTV.setText("events");
+                    presenter.getEvents(searchTV.getText().toString(), lat, lng);
                 }
 
                 dialog.cancel();
@@ -208,7 +208,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
 
-                getEvents("events", lat, lng);
+                searchTV.setText("events");
+                presenter.getEvents(searchTV.getText().toString(), lat, lng);
                 dialog.cancel();
             }
         });
@@ -226,149 +227,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         eventsRecyclerView.setAdapter(eventsAdapter);
 
         eventsAdapter.setClickListener(this);
-    }
-
-    public void getEvents(final String title, String lat, String lng) {
-        service.getEvents(title, "5mi", lat, lng, API_KEY).enqueue(new Callback<EventsAPI>() {
-            @Override
-            public void onResponse(Call<EventsAPI> call, Response<EventsAPI> response) {
-                if (response.isSuccessful()) {
-                    totalEvents.setText("Total results near your location: " + response.body().getEvents().size() + " for " + "\"" + title + "\"");
-
-                    eventsAdapter.updateDataSet(response.body().getEvents());
-                    eventMarkList = new ArrayList<>(0);
-                    eventList = new ArrayList<>(0);
-
-                    Date date1 = null;
-                    String temp = "";
-                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                    for (int i = 0; i < response.body().getEvents().size(); i++) {
-                        try {
-                            date1 = formatter.parse(response.body().getEvents().get(i).getStart().getLocal());
-                            SimpleDateFormat formatter2 = new SimpleDateFormat("M-dd-yyyy h:mm a");
-                            temp = formatter2.format(date1);
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
-
-                        Log.d(TAG, "Title: " + response.body().getEvents().get(i).getName().getText());
-                        //Log.d(TAG, "onResponse: Description: " + response.body().getEvents().get(i).getDescription().getText());
-                        String des1 = response.body().getEvents().get(i).getDescription().getText();
-
-                        /*if (des1 != null) {
-                            Log.d(TAG, "Short Description: " + des1.substring(0, 100) + "...");
-                        }*/
-
-                        Log.d(TAG, "Event Time: " + temp);
-                        Log.d(TAG, "Event Webpage: " + response.body().getEvents().get(i).getUrl());
-
-                        eventMarkList.add(new EventMarkerList(Double.parseDouble(response.body().getEvents().get(i).getVenue().getLatitude()), Double.parseDouble(response.body().getEvents().get(i).getVenue().getLongitude())));
-                        eventList.add(response.body().getEvents().get(i));
-
-                        LatLng eventsLocation = new LatLng(eventMarkList.get(i).getLat(), eventMarkList.get(i).getLng());
-                        mMap.addMarker(new MarkerOptions().position(eventsLocation).title(response.body().getEvents().get(i).getName().getText()));
-                    }
-
-
-                    //Log.d(TAG, "Event Time: " + response.body().getEvents().get(0).getStart().getLocal());
-                    //Log.d(TAG, "Time Converted: " + date1);
-
-                    //Log.d(TAG, "onResponse: " + formatter.parse(response.body().getEvents().get(0).getStart().getLocal()));
-
-                    Log.d(TAG, "Size: " + response.body().getEvents().size());
-                    eventSize = response.body().getEvents().size();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<EventsAPI> call, Throwable t) {
-                Log.d(TAG, "Network Failed");
-            }
-        });
-    }
-
-    private void saveEvent(String title, String desc, String time, String url) {
-        SQLiteDatabase db = EventReaderDBHelper.getInstance(this).getWritableDatabase("somePass");
-
-        ContentValues values = new ContentValues();
-        values.put(EventEntry.COLUMN_NAME_TITLE, title);
-        values.put(EventEntry.COLUMN_NAME_DESCRIPTION, desc);
-        values.put(EventEntry.COLUMN_NAME_TIME, time);
-        values.put(EventEntry.COLUMN_NAME_URL, url);
-
-        db.insert(
-                EventEntry.TABLE_NAME,
-                null,
-                values
-        );
-
-        Cursor cursor = db.rawQuery("SELECT * FROM '" + EventEntry.TABLE_NAME + "';", null);
-        Log.d(MainActivity.class.getSimpleName(), "Rows count: " + cursor.getCount());
-        cursor.close();
-        db.close();
-
-        // this will throw net.sqlcipher.database.SQLiteException: file is encrypted or is not a database: create locale table failed
-        //db = FeedReaderDbHelper.getInstance(this).getWritableDatabase("");
-    }
-
-    private void readEvents() {
-        SQLiteDatabase db = EventReaderDBHelper.getInstance(this).getWritableDatabase("somePass");
-
-        eventsRecyclerView = (RecyclerView) findViewById(R.id.recycler_events);
-        eventsRecyclerView.setHasFixedSize(true);
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
-        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-
-        eventsRecyclerView.setLayoutManager(linearLayoutManager);
-
-
-        String[] projection = {
-                EventEntry._ID,
-                EventEntry.COLUMN_NAME_TITLE,
-                EventEntry.COLUMN_NAME_DESCRIPTION,
-                EventEntry.COLUMN_NAME_TIME,
-                EventEntry.COLUMN_NAME_URL
-        };
-        /*
-        String selection = FeedEntry.COLUMN_NAME_TITLE + " = ?";
-
-
-        String[] selectionArg = {
-                "Record title"
-        };
-        String sortOrder = FeedEntry.COLUMN_NAME_SUBTITLE + "DESC";
-        */
-
-        Cursor cursor = db.query(
-                EventEntry.TABLE_NAME,        // TABLE
-                projection,                  // Projection
-                null,                        // Selection (WHERE)
-                null,                        // Values for selection
-                null,                        // Group by
-                null,                        // Filters
-                null                         // Sort order
-        );
-
-        while (cursor.moveToNext()) {
-            //StringBuilder dataResult = new StringBuilder(String.valueOf(resultTV.getText().toString()));
-            long entryId = cursor.getLong(cursor.getColumnIndexOrThrow(EventEntry._ID));
-            String entryTitle = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TITLE));
-            String entryDesc = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_DESCRIPTION));
-            String entryTime = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TIME));
-            String entryUrl = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_URL));
-
-            Log.d(TAG, "readRecord: id: " + entryId + " title: " + entryTitle + " description: " + entryDesc + " time: " + entryTime + " url: " + entryUrl);
-            //resultTV.setText(dataResult.append(String.format(getString(R.string.lbl_result), entryId, entryTitle, entryDesc, entryTime, entryUrl)));
-        }
-        for (int i = 0; i < cursor.getCount(); i++) {
-            if (cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TITLE)).equals(eventList.get(i).getName().getText().toString())) {
-                Log.d(TAG, "Yes Sexy Croc Baby!");
-            }
-        }
-
-        //cursor.close();
-        db.close();
-        //detailsAdapter.updateDataSet(eventList);
     }
 
     /**
@@ -494,15 +352,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    public void startDetailsActivity(View view) {
-        Intent intent = new Intent(MainActivity.this, DetailsActivity.class);
-        startActivity(intent);
-    }
-
-    public List<String> getEventSaved() {
-        return savedEventList;
-    }
-
     @Override
     public void onClick(View view, final int position) {
         Log.d(TAG, "onClick: " + position);
@@ -531,7 +380,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                             savedEventList.add(eventList.get(position).getUrl());
                             eventsAdapter.getSavedEventState(savedEventList);
                             eventsAdapter.notifyItemChanged(position);
-                            saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
+                            presenter.saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
                             Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
 
                         } else if (!savedEventList.isEmpty()) {
@@ -552,7 +401,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                                 savedEventList.add(eventList.get(position).getUrl());
                                 eventsAdapter.getSavedEventState(savedEventList);
                                 eventsAdapter.notifyItemChanged(position);
-                                saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
+                                presenter.saveEvent(eventList.get(position).getName().getText(), eventList.get(position).getDescription().getText(), stringDate, eventList.get(position).getUrl());
                                 Toast.makeText(MainActivity.this, "Event Saved.", Toast.LENGTH_SHORT).show();
                             }
                         }
@@ -607,5 +456,42 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 })
                 .show();
+    }
+
+    @Override
+    public void showEvents(List<Event> list) {
+        String title = searchTV.getText().toString();
+        eventList = list;
+
+        totalEvents.setText("Total results near your location: " + eventList.size() + " for " + "\"" + title + "\"");
+        eventsAdapter.updateDataSet(eventList);
+    }
+
+    @Override
+    public void showEventsError() {
+        Toast.makeText(MainActivity.this, "Network Failed!", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void showMarkers(List<EventMarkerList> eventMarkerList) {
+        for (int i = 0; i < eventMarkerList.size(); i++) {
+            LatLng eventsLocation = new LatLng(eventMarkerList.get(i).getLat(), eventMarkerList.get(i).getLng());
+            mMap.addMarker(new MarkerOptions().position(eventsLocation).title(eventList.get(i).getName().getText()));
+        }
+    }
+
+    @Override
+    public void showDetailsActivity() {
+        Intent intent = new Intent(MainActivity.this, DetailsActivity.class);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.event_btn_details:
+                presenter.startDetailsActivity();
+                break;
+        }
     }
 }

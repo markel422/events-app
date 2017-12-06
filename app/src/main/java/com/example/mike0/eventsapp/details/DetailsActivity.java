@@ -8,6 +8,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,22 +27,27 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class DetailsActivity extends AppCompatActivity implements ItemClickListener {
+public class DetailsActivity extends AppCompatActivity implements View.OnClickListener, ItemClickListener, DetailsView {
 
     private static final String TAG = "tag";
+
+    DetailsPresenterImpl presenter;
 
     private RecyclerView eventsRecyclerView;
     private DetailsAdapter detailsAdapter;
 
-    SQLiteDatabase db;
-    Cursor cursor;
+    Button btnDetails;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details);
 
-        SQLiteDatabase.loadLibs(this);
+        presenter = new DetailsPresenterImpl(this);
+        presenter.init();
+
+        btnDetails = (Button) findViewById(R.id.btn_show_details);
+        btnDetails.setOnClickListener(this);
     }
 
     @Override
@@ -49,9 +55,22 @@ public class DetailsActivity extends AppCompatActivity implements ItemClickListe
         super.onDestroy();
     }
 
-    private void readEvents() {
-        db = EventReaderDBHelper.getInstance(this).getWritableDatabase("somePass");
+    @Override
+    public void onClick(View view, int position) {
+        Log.d(TAG, "onClick: " + position);
+    }
 
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.btn_show_details:
+                presenter.readEvents();
+                break;
+        }
+    }
+
+    @Override
+    public void showEvents(Cursor cursor) {
         eventsRecyclerView = (RecyclerView) findViewById(R.id.recycler_events);
         eventsRecyclerView.setHasFixedSize(true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -59,61 +78,9 @@ public class DetailsActivity extends AppCompatActivity implements ItemClickListe
 
         eventsRecyclerView.setLayoutManager(linearLayoutManager);
 
-
-        String[] projection = {
-                EventEntry._ID,
-                EventEntry.COLUMN_NAME_TITLE,
-                EventEntry.COLUMN_NAME_DESCRIPTION,
-                EventEntry.COLUMN_NAME_TIME,
-                EventEntry.COLUMN_NAME_URL
-        };
-        /*
-        String selection = FeedEntry.COLUMN_NAME_TITLE + " = ?";
-
-
-        String[] selectionArg = {
-                "Record title"
-        };
-        String sortOrder = FeedEntry.COLUMN_NAME_SUBTITLE + "DESC";
-        */
-
-        cursor = db.query(
-                EventEntry.TABLE_NAME,        // TABLE
-                projection,                  // Projection
-                null,                        // Selection (WHERE)
-                null,                        // Values for selection
-                null,                        // Group by
-                null,                        // Filters
-                null                         // Sort order
-        );
-
-        while (cursor.moveToNext()) {
-            //StringBuilder dataResult = new StringBuilder(String.valueOf(resultTV.getText().toString()));
-            long entryId = cursor.getLong(cursor.getColumnIndexOrThrow(EventEntry._ID));
-            String entryTitle = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TITLE));
-            String entryDesc = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_DESCRIPTION));
-            String entryTime = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_TIME));
-            String entryUrl = cursor.getString(cursor.getColumnIndexOrThrow(EventEntry.COLUMN_NAME_URL));
-
-            Log.d(TAG, "readRecord: id: " + entryId + " title: " + entryTitle + " description: " + entryDesc + " time: " + entryTime + " url: " + entryUrl);
-            //resultTV.setText(dataResult.append(String.format(getString(R.string.lbl_result), entryId, entryTitle, entryDesc, entryTime, entryUrl)));
-        }
-
         detailsAdapter = new DetailsAdapter(this, cursor);
         eventsRecyclerView.setAdapter(detailsAdapter);
 
-        //cursor.close();
-        db.close();
-        //detailsAdapter.updateDataSet(eventList);
         detailsAdapter.setClickListener(this);
-    }
-
-    public void ShowEventList(View view) {
-        readEvents();
-    }
-
-    @Override
-    public void onClick(View view, int position) {
-        Log.d(TAG, "onClick: " + position);
     }
 }

@@ -11,4 +11,5 @@
     <string name="dialog_title_name">Enter an Event Title</string>
     <string name="zipcode">fgg</string>
     <string name="event">If empty, search default will be \"events\"</string>
+    <string name="lbl_saved_events">Show Saved Events</string>
 </resources>
