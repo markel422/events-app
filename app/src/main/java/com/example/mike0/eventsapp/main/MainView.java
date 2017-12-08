@@ -12,7 +12,7 @@ import java.util.List;
 public interface MainView {
     void showEvents(List<Event> list);
 
-    void showEventsError();
+    void showError();
 
     void showMarkers(List<EventMarkerList> eventMarkerList);
 

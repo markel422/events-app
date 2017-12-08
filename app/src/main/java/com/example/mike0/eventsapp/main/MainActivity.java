@@ -12,6 +12,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.test.espresso.idling.CountingIdlingResource;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -20,6 +21,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -70,6 +72,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 10;
     private static final String TAG = "tag";
 
+    CountingIdlingResource espressoTestIdlingResource = new CountingIdlingResource("Network_Call");
+
     final static String API_KEY = "XEJ7EQTKLAJUUC5LOOPS";
 
     SupportMapFragment mapFragment;
@@ -109,7 +113,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        presenter = new MainPresenterImpl(this);
+        presenter = new MainPresenterImpl(this, this);
 
         savedEventPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
@@ -184,6 +188,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         dialog.setCanceledOnTouchOutside(false);
         dialog.setTitle("Enter an Event Title");
         dialog.setContentView(R.layout.dialog_eventsearch);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         // Get the layout inflater
         dialog.show();
 
@@ -203,6 +208,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     presenter.getEvents(searchTV.getText().toString(), lat, lng);
                 }
                 dialog.cancel();
+                espressoTestIdlingResource.increment();
             }
         });
 
@@ -213,6 +219,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 searchTV.setText("events");
                 presenter.getEvents(searchTV.getText().toString(), lat, lng);
                 dialog.cancel();
+                espressoTestIdlingResource.increment();
             }
         });
     }
@@ -467,11 +474,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         totalEvents.setText("Total results near your location: " + eventList.size() + " for " + "\"" + title + "\"");
         eventsAdapter.updateDataSet(eventList);
+        espressoTestIdlingResource.decrement();
     }
 
     @Override
-    public void showEventsError() {
+    public void showError() {
         Toast.makeText(MainActivity.this, "Network Failed!", Toast.LENGTH_SHORT).show();
+        espressoTestIdlingResource.decrement();
     }
 
     @Override
@@ -495,5 +504,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 presenter.startDetailsActivity();
                 break;
         }
+    }
+
+    public CountingIdlingResource getEspressoIdlingResourceForMainActivity() {
+        return espressoTestIdlingResource;
     }
 }

@@ -15,13 +15,11 @@ import java.util.List;
 public class MainPresenterImpl implements MainPresenter, MainInteractor.OnEventResponseListener {
 
     private MainView mainView;
-    private Context context;
 
     private MainInteractor interactor;
 
-    public MainPresenterImpl(MainView mainView) {
+    public MainPresenterImpl(MainView mainView, Context context) {
         this.mainView = mainView;
-        this.context = (Context) mainView;
         this.interactor = new MainInteractor(context);
     }
 
@@ -32,7 +30,7 @@ public class MainPresenterImpl implements MainPresenter, MainInteractor.OnEventR
 
     @Override
     public void onEventResponseError() {
-        mainView.showEventsError();
+        mainView.showError();
     }
 
     @Override

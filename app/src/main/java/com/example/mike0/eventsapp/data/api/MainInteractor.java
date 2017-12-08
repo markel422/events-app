@@ -61,7 +61,11 @@ public class MainInteractor {
     }
 
     public void init() {
-        SQLiteDatabase.loadLibs(context);
+        try {
+            SQLiteDatabase.loadLibs(context);
+        } catch (final UnsatisfiedLinkError e) {
+            Log.e(TAG, "loadLibrary" + Log.getStackTraceString(e));
+        }
 
         service = new Retrofit.Builder()
                 .baseUrl(EventsService.BASE_URL)
