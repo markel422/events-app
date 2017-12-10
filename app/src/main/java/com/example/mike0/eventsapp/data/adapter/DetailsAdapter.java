@@ -246,14 +246,6 @@ public class DetailsAdapter extends RecyclerView.Adapter<DetailsAdapter.ViewHold
         @Override
         public void onClick(View view) {
             clickListener.onClick(view, getAdapterPosition());
-
-            /*if (saveEvent != false) {
-                Log.d(TAG, "onClick: " + saveEvent);
-                favIcon.setVisibility(View.VISIBLE);
-            } else {
-                Log.d(TAG, "onClick: " + saveEvent);
-                favIcon.setVisibility(View.INVISIBLE);
-            }*/
         }
     }
 }

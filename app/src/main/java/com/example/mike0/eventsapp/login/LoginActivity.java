@@ -26,7 +26,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
         loginBtn = (Button) findViewById(R.id.alt_login_btn);
 
-        presenter = new LoginPresenterImpl(this, getApplicationContext());
+        presenter = new LoginPresenterImpl(this, this);
 
         presenter.init();
 

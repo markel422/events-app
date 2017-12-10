@@ -48,10 +48,18 @@ public class FingerPrintAuth {
     private FingerprintManager fingerprintManager;
     private KeyguardManager keyguardManager;
     private Context context;
-    private String authStatus;
+    private OnAuthResponseListener listener;
 
     public FingerPrintAuth(Context context) {
         this.context = context;
+    }
+
+    public interface OnAuthResponseListener {
+        void onAuthStatus(String status);
+    }
+
+    public void setOnAuthResponseListener(OnAuthResponseListener listener) {
+        this.listener = listener;
     }
 
     public void init() {
@@ -67,24 +75,24 @@ public class FingerPrintAuth {
             //Check whether the device has a fingerprint sensor//
             if (!fingerprintManager.isHardwareDetected()) {
                 // If a fingerprint sensor isn’t available, then inform the user that they’ll be unable to use your app’s fingerprint functionality//
-                authStatus = "Your device doesn't support fingerprint authentication";
+                listener.onAuthStatus("Your device doesn't support fingerprint authentication");
             }
             //Check whether the user has granted your app the USE_FINGERPRINT permission//
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.USE_FINGERPRINT) != PackageManager.PERMISSION_GRANTED) {
                 // If your app doesn't have this permission, then display the following text//
-                authStatus = "Please enable the fingerprint permission";
+                listener.onAuthStatus("Please enable the fingerprint permission");
             }
 
             //Check that the user has registered at least one fingerprint//
             if (!fingerprintManager.hasEnrolledFingerprints()) {
                 // If the user hasn’t configured any fingerprints, then display the following message//
-                authStatus = "No fingerprint configured. Please register at least one fingerprint in your device's Settings";
+                listener.onAuthStatus("No fingerprint configured. Please register at least one fingerprint in your device's Settings");
             }
 
             //Check that the lockscreen is secured//
             if (!keyguardManager.isKeyguardSecure()) {
                 // If the user hasn’t secured their lockscreen with a PIN password or pattern, then display the following text//
-                authStatus = "Please enable lockscreen security in your device's Settings";
+                listener.onAuthStatus("Please enable lockscreen security in your device's Settings");
             } else {
                 try {
                     generateKey();
@@ -102,12 +110,7 @@ public class FingerPrintAuth {
                     helper.startAuth(fingerprintManager, cryptoObject);
                 }
             }
-
         }
-    }
-
-    public String getAuthStatus() {
-        return authStatus;
     }
 
     @TargetApi(Build.VERSION_CODES.M)

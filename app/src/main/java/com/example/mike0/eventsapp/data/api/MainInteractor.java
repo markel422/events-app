@@ -61,11 +61,7 @@ public class MainInteractor {
     }
 
     public void init() {
-        try {
-            SQLiteDatabase.loadLibs(context);
-        } catch (final UnsatisfiedLinkError e) {
-            Log.e(TAG, "loadLibrary" + Log.getStackTraceString(e));
-        }
+        SQLiteDatabase.loadLibs(context);
 
         service = new Retrofit.Builder()
                 .baseUrl(EventsService.BASE_URL)
@@ -79,16 +75,14 @@ public class MainInteractor {
             @Override
             public void onResponse(Call<EventsAPI> call, Response<EventsAPI> response) {
                 if (response.isSuccessful()) {
-                    //totalEvents.setText("Total results near your location: " + response.body().getEvents().size() + " for " + "\"" + title + "\"");
 
-                    //eventsAdapter.updateDataSet(response.body().getEvents());
                     eventMarkList = new ArrayList<>(0);
                     eventList = new ArrayList<>(0);
                     eventList.addAll(response.body().getEvents());
 
                     listener.onEventResponseDone(eventList);
 
-                    Date date1 = null;
+                    Date date1;
                     String temp = "";
                     SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                     for (int i = 0; i < response.body().getEvents().size(); i++) {

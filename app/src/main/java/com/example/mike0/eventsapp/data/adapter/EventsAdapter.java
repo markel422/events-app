@@ -57,10 +57,6 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         notifyDataSetChanged();
     }
 
-    public int getGlobalPosition() {
-        return globalPosition;
-    }
-
     public void getSavedEventState(List<String> state) {
         savedList = state;
     }
@@ -267,12 +263,5 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.ViewHolder
         public void onClick(View view) {
             clickListener.onClick(view, getAdapterPosition());
         }
-
-        /*@Override
-        public void onClick(View view) {
-            Context context = view.getContext();
-            Books result = eventsList.get(getAdapterPosition());
-            context.startActivity(DetailActivity.getDetailActivityIntent(context, result));
-        }*/
     }
 }

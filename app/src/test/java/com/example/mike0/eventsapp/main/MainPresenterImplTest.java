@@ -12,8 +12,10 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -37,17 +39,14 @@ public class MainPresenterImplTest {
     public void setUp() {
         MockitoAnnotations.initMocks(this);
 
-        events = new ArrayList<>(0);
+        events = Collections.singletonList(new Event());
     }
 
     @Test
     public void getEvents_shouldShowEvents() {
-        String title = "club";
-        String lat = "33.9017";
-        String lng = "-84.4463";
 
-        presenter.getEvents(title, lat, lng);
-        verify(interactor).getEvents(title, lat, lng);
+        presenter.getEvents(anyString(), anyString(), anyString());
+        verify(interactor).getEvents(anyString(), anyString(), anyString());
 
         presenter.onEventResponseDone(events);
         verify(view).showEvents(events);
@@ -55,14 +54,18 @@ public class MainPresenterImplTest {
 
     @Test
     public void getEvents_shouldShowError() {
-        String title = "club";
-        String lat = "33.9017";
-        String lng = "-84.4463";
 
-        presenter.getEvents(title, lat, lng);
-        verify(interactor).getEvents(title, lat, lng);
+        presenter.getEvents(anyString(), anyString(), anyString());
+        verify(interactor).getEvents(anyString(), anyString(), anyString());
 
         presenter.onEventResponseError();
         verify(view).showError();
+    }
+
+    @Test
+    public void startDetailsActivity_shouldShowActivity() {
+
+        presenter.startDetailsActivity();
+        verify(view).showDetailsActivity();
     }
 }

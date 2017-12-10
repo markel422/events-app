@@ -43,7 +43,7 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details);
 
-        presenter = new DetailsPresenterImpl(this);
+        presenter = new DetailsPresenterImpl(this, this);
         presenter.init();
 
         btnDetails = (Button) findViewById(R.id.btn_show_details);
@@ -64,7 +64,7 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.btn_show_details:
-                presenter.readEvents();
+                presenter.getEvents();
                 break;
         }
     }
